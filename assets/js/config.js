@@ -5,8 +5,8 @@
 window.PYRAMIDE_CONFIG = {
   // Supabase project for appointment bookings (Project Settings → API).
   // Example url: "https://xxxxxxxxxxxx.supabase.co"
-  supabaseUrl: "",
-  supabaseAnonKey: "",
+  supabaseUrl: "https://tdwtqlqnmlqdwhavwaer.supabase.co",
+  supabaseAnonKey: "sb_publishable_RB6sXIDgr3RsYUutzqH0kg_JIWVJglC",
 
   // Product
   priceEur: 6,       // paid in cash at pickup

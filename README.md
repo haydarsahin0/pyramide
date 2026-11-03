@@ -30,7 +30,10 @@ Müşteri sağ üstteki **Termin buchen** ile numarasını girip randevusunu de�
 
 ### 1. Supabase (randevular + admin)
 
-Veritabanı bağlanana kadar site **önizleme modunda** çalışır: üstte ince bir uyarı şeridi görünür ve rezervasyonlar sadece o tarayıcıda tutulur.
+**Bağlı:** `haydarsahin0's Project` (tdwtqlqnmlqdwhavwaer) içindeki `pyramide_bookings` / `pyramide_admin` tabloları.
+Admin şifresini değiştirmek için SQL Editor'de `select public.pyramide_admin_set_password('yeni-sifre');` çalıştır.
+
+Yeni bir projeye taşımak istersen:
 
 1. Supabase → SQL Editor → `supabase/schema.sql` dosyasının içeriğini çalıştır.
 2. Admin şifreni belirle (en az 10 karakter), yine SQL Editor'de:
