@@ -80,6 +80,7 @@
       showDash();
       render();
       $("#updated").textContent = "Son güncelleme: " + fmtTime(Date.now());
+      loadThreads();
       if (!silent) toast("Güncellendi");
     } catch {
       if (!state.rows.length) showLogin("Bağlantı kurulamadı. Tekrar dene.");
@@ -220,8 +221,136 @@
   // auto-refresh every minute while visible
   setInterval(() => { if (!document.hidden && !$("#dash").hidden) load(true); }, 60000);
 
+
+  /* ── messages ────────────────────────────── */
+  const chat = { threads: [], active: null, msgs: [], tab: "res", timer: null };
+  const fmtWhen = (iso) => {
+    const d = new Date(iso), now = new Date();
+    if (d.toDateString() === now.toDateString()) return fmtTime(d);
+    return new Intl.DateTimeFormat("tr-TR", { timeZone: TZ, day: "numeric", month: "short" }).format(d) + " " + fmtTime(d);
+  };
+
+  async function loadThreads() {
+    if (!LIVE_DB) return;
+    try {
+      const res = await rpc("pyramide_admin_threads", { p_password: state.pw });
+      if (!res || !res.ok) return;
+      chat.threads = res.rows || [];
+      renderThreads();
+    } catch { /* ignore, next refresh */ }
+  }
+
+  function renderThreads() {
+    const unread = chat.threads.reduce((n, th) => n + (th.unread > 0 ? 1 : 0), 0);
+    $("#msgBadge").hidden = !unread; $("#msgBadge").textContent = unread;
+    document.title = (unread ? `(${unread}) ` : "") + "Pyramide · Admin";
+    const el = $("#threads");
+    if (!chat.threads.length) { el.innerHTML = '<div class="threads-empty">Henüz mesaj yok.</div>'; return; }
+    el.innerHTML = chat.threads.map((th) => {
+      const who = th.name || (th.email ? th.email : "Ziyaretçi");
+      const last = th.last ? (th.last.sender === "admin" ? "<b>Sen:</b> " : "") + esc(th.last.body) : "";
+      return `<button type="button" class="thread${th.unread > 0 ? " unread" : ""}" data-thread="${esc(th.id)}" aria-current="${th.id === chat.active}">
+        <span class="thread-top"><span class="thread-name">${esc(who)}</span><span class="thread-time">${esc(fmtWhen(th.last_message_at))}</span></span>
+        <span class="thread-prev">${last}</span>
+      </button>`;
+    }).join("");
+  }
+
+  async function openThread(id, silent) {
+    chat.active = id;
+    $(".inbox").classList.add("has-active");
+    const th = chat.threads.find((x) => x.id === id);
+    if (th) th.unread = 0;
+    renderThreads();
+    if (!silent) renderConvo(true);
+    try {
+      const res = await rpc("pyramide_admin_thread", { p_password: state.pw, p_thread: id });
+      if (!res || !res.ok || chat.active !== id) return;
+      const changed = JSON.stringify(res.rows) !== JSON.stringify(chat.msgs);
+      chat.msgs = res.rows || [];
+      if (changed || !silent) renderConvo(false);
+    } catch { toast("Mesajlar yüklenemedi"); }
+  }
+
+  function renderConvo(loading) {
+    const th = chat.threads.find((x) => x.id === chat.active);
+    const el = $("#convo");
+    if (!th) { el.innerHTML = '<div class="convo-empty">Soldan bir konuşma seç.</div>'; return; }
+    const draft = $("#replyInput") ? $("#replyInput").value : "";
+    const meta = [
+      th.email ? `<a href="mailto:${esc(th.email)}">${esc(th.email)}</a>` : "",
+      th.order_no ? `<span class="mono">${esc(th.order_no)}</span>` : "",
+      th.lang ? `<span>${th.lang === "de" ? "Almanca" : "İngilizce"}</span>` : "",
+      `<span>${esc(fmtWhen(th.created_at))} başladı</span>`
+    ].filter(Boolean).join("");
+    el.innerHTML = `
+      <div class="convo-head">
+        <button type="button" class="icon-btn convo-back" id="convoBack" aria-label="Geri"><svg viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6"/></svg></button>
+        <div class="convo-who"><strong>${esc(th.name || "Ziyaretçi")}</strong><div class="convo-meta">${meta}</div></div>
+        <button type="button" class="del" id="convoDel" title="Konuşmayı sil" aria-label="Konuşmayı sil"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="convo-body" id="convoBody">${loading ? '<div class="convo-empty">Yükleniyor…</div>' :
+        chat.msgs.map((m) => `<div class="bubble ${m.sender === "admin" ? "from-admin" : "from-me"}"><p>${esc(m.body).replace(/\n/g, "<br>")}</p><span class="bubble-meta">${esc(fmtWhen(m.created_at))}</span></div>`).join("")}</div>
+      <form class="convo-form" id="replyForm">
+        <textarea id="replyInput" rows="1" maxlength="2000" placeholder="Cevabını yaz… (Enter = gönder, Shift+Enter = yeni satır)"></textarea>
+        <button class="btn btn-primary" type="submit">Gönder</button>
+      </form>`;
+    const body = $("#convoBody"); body.scrollTop = body.scrollHeight;
+    const input = $("#replyInput"); input.value = draft;
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("#replyForm").requestSubmit(); } });
+    input.addEventListener("input", () => { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 160) + "px"; });
+    $("#convoBack").addEventListener("click", () => { chat.active = null; $(".inbox").classList.remove("has-active"); renderThreads(); renderConvo(); });
+    $("#convoDel").addEventListener("click", async () => {
+      if (!confirm(`${th.name || "Ziyaretçi"} ile olan konuşma silinsin mi? Bu geri alınamaz.`)) return;
+      try {
+        const res = await rpc("pyramide_admin_delete_thread", { p_password: state.pw, p_thread: th.id });
+        if (!res || !res.ok) throw new Error();
+        chat.threads = chat.threads.filter((x) => x.id !== th.id); chat.active = null; chat.msgs = [];
+        $(".inbox").classList.remove("has-active"); renderThreads(); renderConvo(); toast("Konuşma silindi");
+      } catch { toast("Silinemedi"); }
+    });
+    $("#replyForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const text = input.value.trim(); if (!text) return;
+      input.disabled = true;
+      try {
+        const res = await rpc("pyramide_admin_reply", { p_password: state.pw, p_thread: th.id, p_body: text });
+        if (!res || !res.ok) throw new Error();
+        input.value = "";
+        th.last = { sender: "admin", body: text }; th.last_message_at = new Date().toISOString();
+        await openThread(th.id, true);
+        renderConvo(false);
+      } catch { toast("Gönderilemedi"); }
+      finally { const i = $("#replyInput"); if (i) { i.disabled = false; i.focus(); } }
+    });
+    if (!loading) setTimeout(() => input.focus(), 30);
+  }
+
+  $("#threads").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-thread]"); if (!b) return;
+    chat.msgs = []; openThread(b.dataset.thread);
+  });
+
+  function setTab(tab) {
+    chat.tab = tab;
+    $$("#tabs button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.tab === tab)));
+    $("#resView").hidden = tab !== "res";
+    $("#msgView").hidden = tab !== "msg";
+    $("#csvBtn").hidden = tab !== "res";
+    $("#aTitle").textContent = tab === "res" ? "Rezervasyonlar" : "Mesajlar";
+    if (tab === "msg") loadThreads();
+    clearInterval(chat.timer);
+    chat.timer = setInterval(() => {
+      if (document.hidden || $("#dash").hidden || chat.tab !== "msg") return;
+      loadThreads();
+      if (chat.active) openThread(chat.active, true);
+    }, 10000);
+  }
+  $("#tabs").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) setTab(b.dataset.tab); });
+
   /* ── boot ────────────────────────────────── */
   $("#previewBanner").hidden = LIVE_DB;
+  if (!LIVE_DB) $("#tabs").hidden = true;
   if (!LIVE_DB) load(true);
   else if (state.pw) load(true);
   else showLogin();

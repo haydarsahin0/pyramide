@@ -60,6 +60,12 @@
           <span class="hero-cta-sep" aria-hidden="true"></span>
           <span class="hero-cta-price" data-price></span>
         </button>
+        <a class="return-card" id="returnCard" href="#/done" hidden>
+          <span class="return-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14" rx="3"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></svg></span>
+          <span class="return-text"><strong data-i18n="return.title"></strong><span id="returnWhen"></span></span>
+          <span class="return-order" id="returnOrder"></span>
+          <span class="return-arrow" aria-hidden="true">›</span>
+        </a>
       </section>
 
       <section class="section rules-section" id="rules">
@@ -349,10 +355,55 @@
     </form>
   </dialog>
 
+  <!-- chat -->
+  <button class="chat-fab" id="chatFab" type="button" hidden aria-expanded="false" aria-controls="chatPanel">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 6.5A2.5 2.5 0 0 1 7 4h10a2.5 2.5 0 0 1 2.5 2.5v7A2.5 2.5 0 0 1 17 16h-5.2L7.5 19.6V16H7a2.5 2.5 0 0 1-2.5-2.5Z"/></svg>
+    <span class="chat-fab-label" data-i18n="chat.fab"></span>
+    <span class="chat-badge" id="chatBadge" hidden></span>
+  </button>
+  <section class="chat-panel" id="chatPanel" hidden role="dialog" aria-labelledby="chatTitle">
+    <header class="chat-head">
+      <img src="assets/img/sticker.svg" width="44" height="44" alt="">
+      <div class="chat-head-text">
+        <h2 id="chatTitle" data-i18n="chat.title"></h2>
+        <p data-i18n="chat.sub"></p>
+      </div>
+      <button type="button" class="icon-btn" id="chatCodeBtn" aria-expanded="false" data-i18n-aria="chat.code.btn"><svg viewBox="0 0 24 24"><circle cx="8.5" cy="14.5" r="4"/><path d="M11.5 11.5 19 4m-3 3 2.5 2.5M14 9l2 2"/></svg></button>
+      <button type="button" class="icon-btn" id="chatClose" data-i18n-aria="chat.close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </header>
+    <div class="chat-code" id="chatCode" hidden>
+      <div id="chatCodeHave">
+        <p class="chat-code-k" data-i18n="chat.code.yours"></p>
+        <div class="chat-code-row"><output class="chat-code-val" id="chatCodeVal"></output><button type="button" class="btn btn-soft" id="chatCodeCopy" data-i18n="chat.code.copy"></button></div>
+        <p class="chat-code-hint" data-i18n="chat.code.hint"></p>
+      </div>
+      <p class="chat-code-hint" id="chatCodeNone" data-i18n="chat.code.none"></p>
+      <p class="chat-code-k" data-i18n="chat.code.restore"></p>
+      <form class="chat-code-row" id="chatRestore" novalidate>
+        <input id="chatRestoreInput" type="text" maxlength="30" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="PYC-XXXX-XXXX-XXXX-XXXX">
+        <button type="submit" class="btn btn-soft" data-i18n="chat.code.open"></button>
+      </form>
+      <p class="chat-err" id="chatRestoreErr" hidden data-i18n="chat.code.notfound"></p>
+    </div>
+    <div class="chat-body" id="chatBody" aria-live="polite"></div>
+    <form class="chat-form" id="chatForm" novalidate>
+      <div class="chat-identity" id="chatIdentity">
+        <input type="text" id="chatName" maxlength="80" autocomplete="name" data-i18n-placeholder="chat.name">
+        <input type="email" id="chatEmail" maxlength="120" autocomplete="email" data-i18n-placeholder="chat.email">
+      </div>
+      <div class="chat-compose">
+        <textarea id="chatInput" rows="1" maxlength="2000" data-i18n-placeholder="chat.placeholder"></textarea>
+        <button type="submit" class="chat-send" data-i18n-aria="chat.send"><svg viewBox="0 0 24 24"><path d="M5 12h13M12.5 6.5 18 12l-5.5 5.5"/></svg></button>
+      </div>
+      <p class="chat-err" id="chatErr" role="alert" hidden></p>
+    </form>
+  </section>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="assets/js/config.js"></script>
   <script src="assets/js/i18n.js"></script>
   <script src="assets/js/app.js"></script>
+  <script src="assets/js/chat.js"></script>
 </body>
 </html>

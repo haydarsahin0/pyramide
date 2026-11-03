@@ -92,6 +92,57 @@
       .seg { overflow-x: auto; }
       .search { width: 100%; }
     }
+
+    .a-tabs { display: inline-flex; margin-bottom: 22px; }
+    .a-tabs button { height: 40px; padding: 0 20px; font-size: 15px; position: relative; }
+    .tab-badge { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; margin-left: 8px; border-radius: 999px; background: var(--gold); color: var(--ink); font-size: 12px; font-weight: 700; vertical-align: 1px; }
+
+    .inbox { display: grid; grid-template-columns: 320px 1fr; gap: 14px; height: min(72vh, 760px); }
+    .threads, .convo {
+      background: var(--glass); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .threads { overflow-y: auto; padding: 6px; }
+    .thread { display: block; width: 100%; min-width: 0; overflow: hidden; text-align: left; padding: 12px 14px; border-radius: 16px; transition: background .2s; }
+    .thread + .thread { margin-top: 2px; }
+    .thread:hover { background: rgba(255, 255, 255, .45); }
+    .thread[aria-current="true"] { background: rgba(255, 255, 255, .8); box-shadow: 0 1px 2px rgba(60,44,22,.08); }
+    .thread-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+    .thread-name { font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .thread-time { font-size: 12px; color: var(--ink-3); flex: none; }
+    .thread-prev { display: block; font-size: 13.5px; color: var(--ink-2); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .thread-prev b { font-weight: 500; color: var(--ink-3); }
+    .thread.unread .thread-name::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--bronze); margin-right: 7px; vertical-align: 1px; }
+    .thread.unread .thread-prev { color: var(--ink); font-weight: 500; }
+    .threads-empty { padding: 40px 20px; text-align: center; color: var(--ink-3); font-size: 15px; }
+
+    .convo { display: flex; flex-direction: column; }
+    .convo-empty { margin: auto; color: var(--ink-3); }
+    .convo-head { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid rgba(29,27,23,.07); }
+    .convo-back { display: none; }
+    .convo-who { flex: 1; min-width: 0; }
+    .convo-who strong { font-size: 17px; letter-spacing: -0.02em; }
+    .convo-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--ink-3); margin-top: 2px; }
+    .convo-meta a { color: var(--bronze); }
+    .convo-meta .mono { color: var(--ink-2); }
+    .convo-body { flex: 1; overflow-y: auto; padding: 18px 20px; display: flex; flex-direction: column; gap: 8px; }
+    .convo-body .from-admin { align-self: flex-end; background: var(--ink); color: #FBF7EF; border-radius: 20px; border-bottom-right-radius: 6px; border: 0; box-shadow: none; }
+    .convo-body .from-admin .bubble-meta { text-align: right; }
+    .convo-body .from-me { align-self: flex-start; background: rgba(255,255,255,.78); color: var(--ink); border: 1px solid rgba(255,255,255,.85); border-radius: 20px; border-bottom-left-radius: 6px; }
+    .convo-body .from-me .bubble-meta { text-align: left; }
+    .convo-form { display: flex; gap: 8px; align-items: flex-end; padding: 12px 14px 14px; border-top: 1px solid rgba(29,27,23,.07); }
+    .convo-form textarea { flex: 1; min-height: 46px; max-height: 160px; padding: 12px 14px; border-radius: 16px; border: 1px solid rgba(255,255,255,.75); background: rgba(255,253,248,.7); font: inherit; font-size: 15px; resize: none; outline: none; }
+    .convo-form textarea:focus { border-color: var(--ink); background: #fff; }
+    .convo-form .btn { height: 46px; }
+
+    @media (max-width: 900px) {
+      .inbox { grid-template-columns: 1fr; height: auto; }
+      .threads { max-height: none; }
+      .inbox.has-active .threads { display: none; }
+      .inbox:not(.has-active) .convo { display: none; }
+      .convo { height: 74vh; }
+      .convo-back { display: grid; }
+    }
   </style>
 </head>
 <body>
@@ -130,7 +181,7 @@
     <div class="a-top">
       <div>
         <p class="eyebrow" lang="de">Pyramide Göttingen</p>
-        <h1>Rezervasyonlar</h1>
+        <h1 id="aTitle">Rezervasyonlar</h1>
         <p class="a-updated" id="updated"></p>
       </div>
       <div class="a-tools">
@@ -139,6 +190,12 @@
       </div>
     </div>
 
+    <div class="seg a-tabs" id="tabs">
+      <button type="button" data-tab="res" aria-pressed="true">Rezervasyonlar</button>
+      <button type="button" data-tab="msg" aria-pressed="false">Mesajlar<span class="tab-badge" id="msgBadge" hidden></span></button>
+    </div>
+
+    <div id="resView">
     <div class="stats">
       <div class="stat dark"><div class="stat-k">Bugün</div><div class="stat-v" id="sToday">0</div><div class="stat-s" id="sTodaySub"></div></div>
       <div class="stat"><div class="stat-k">Yaklaşan rezervasyon</div><div class="stat-v" id="sUpcoming">0</div><div class="stat-s" id="sUpcomingSub"></div></div>
@@ -157,6 +214,14 @@
     </div>
 
     <div id="list"></div>
+    </div>
+
+    <div id="msgView" hidden>
+      <div class="inbox">
+        <aside class="threads" id="threads"></aside>
+        <section class="convo" id="convo"><div class="convo-empty">Soldan bir konuşma seç.</div></section>
+      </div>
+    </div>
   </main>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>

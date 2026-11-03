@@ -60,6 +60,7 @@
 
     $$("[data-price]").forEach((el) => { el.textContent = money(cfg.priceEur); });
 
+    if (currentView === "shop") renderReturn();
     if (currentView === "book") renderBooking();
     if (currentView === "done") renderDone();
     if (currentView === "order") renderOrder();
@@ -131,10 +132,23 @@
       if (on && changed) { v.classList.remove("view-enter"); void v.offsetWidth; v.classList.add("view-enter"); }
     });
     if (changed && !(view === "shop" && /^#[a-z]/.test(location.hash))) window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
+    if (view === "shop") renderReturn();
     if (view === "order") renderOrder();
     if (view === "book") enterBooking();
     if (view === "done") renderDone();
   }
+  // returning visitor: show their upcoming reservation on the home page
+  function renderReturn() {
+    const card = $("#returnCard"); if (!card) return;
+    const b = state.order && store.get("booking:" + state.order.no);
+    const show = !!(b && b.slot + cfg.slotMinutes * 60000 > Date.now());
+    card.hidden = !show;
+    if (show) {
+      $("#returnWhen").textContent = fmtWhen(b.slot);
+      $("#returnOrder").textContent = state.order.no;
+    }
+  }
+
   window.addEventListener("hashchange", () => render(routeFromHash()));
   window.addEventListener("popstate", () => render(routeFromHash()));
 
@@ -298,6 +312,9 @@
     if (saved && !$("#fName").value) $("#fName").value = saved.name || "";
     if (saved && !$("#fEmail").value) $("#fEmail").value = saved.email || "";
     if (saved && saved.qty) state.qty = saved.qty;
+    const prof = store.get("profile");
+    if (prof && !$("#fName").value) $("#fName").value = prof.name || "";
+    if (prof && !$("#fEmail").value) $("#fEmail").value = prof.email || "";
     state.dayIndex = Math.max(0, state.days.findIndex((d) => d.slots.some((s) => !s.past)));
     renderBooking();
     await loadTaken();
@@ -430,6 +447,7 @@
         return;
       }
       store.set("booking:" + state.order.no, { slot: state.slot, name, email, qty: state.qty });
+      store.set("profile", { name, email: email || (store.get("profile") || {}).email || "" });
       go("done");
     } catch {
       showErr("book.err.network");

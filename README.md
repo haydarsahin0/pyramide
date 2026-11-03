@@ -26,6 +26,18 @@ Müşteri sağ üstteki **Termin buchen** ile numarasını girip randevusunu de�
 - CSV olarak dışa aktarma (Excel'de açılır)
 - Sayfa her dakika kendini yeniler
 
+## Mesajlar (sohbet)
+
+- Sitede sağ altta **Nachricht** butonu: ziyaretçi giriş yapmadan yazar; cevabın aynı pencerede görünür.
+- Admin paneli → **Mesajlar** sekmesi: konuşma listesi (okunmamışlar işaretli), cevap kutusu, konuşma silme. Panel 10 saniyede bir yenilenir.
+- Ziyaretçi o tarayıcıda otomatik hatırlanır. Başka cihazda devam etmek için anahtar simgesinden `PYC-XXXX-XXXX-XXXX-XXXX` kodunu alıp diğer cihazda girer.
+- İsim/e-posta ve Bestellnummer (varsa) konuşmaya otomatik eklenir. Kötüye kullanıma karşı sınır: konuşma başına 10 dakikada 15 mesaj.
+
+## Hatırlama
+
+Hesap yok; her şey tarayıcıda saklanır: Bestellnummer, rezervasyon, isim/e-posta ve sohbet.
+Geri dönen ziyaretçi ana sayfada **Deine Reservierung** kartını görür. Başka cihazda rezervasyon için Bestellnummer, sohbet için sohbet kodu yeterli.
+
 ## Canlıya alma
 
 ### 1. Supabase (randevular + admin)
@@ -60,8 +72,10 @@ assets/js/config.js    Supabase, fiyat, adet ve saat ayarları
 assets/js/i18n.js      DE + EN metinler
 assets/js/app.js       site mantığı
 assets/js/admin.js     admin mantığı
+assets/js/chat.js      sohbet penceresi
 assets/img/            sticker, bayraklar, ikonlar
-supabase/schema.sql    tablo + fonksiyonlar
+supabase/schema.sql    rezervasyon tabloları + fonksiyonlar
+supabase/chat.sql      sohbet tabloları + fonksiyonlar (schema.sql'den sonra)
 ```
 
 Saatleri veya en fazla adedi değiştirirsen aynı değerleri `supabase/schema.sql` → `pyramide_book` içindeki kontrollerde de güncelle.
