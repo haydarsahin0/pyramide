@@ -1,0 +1,30 @@
+/*
+ * Pyramide Göttingen — configuration
+ * Fill these in to go live. See README.md for step-by-step setup.
+ */
+window.PYRAMIDE_CONFIG = {
+  // Stripe Payment Link (Stripe Dashboard → Payment Links → Create).
+  // Example: "https://buy.stripe.com/abc123XYZ"
+  stripePaymentLink: "",
+
+  // Supabase project for appointment bookings (Project Settings → API).
+  // Example url: "https://xxxxxxxxxxxx.supabase.co"
+  supabaseUrl: "",
+  supabaseAnonKey: "",
+
+  // Product
+  priceEur: 6,
+
+  // Pickup schedule (Europe/Berlin time)
+  timezone: "Europe/Berlin",
+  openHour: 10,      // first slot 10:00
+  closeHour: 20,     // last slot starts 19:30
+  slotMinutes: 30,
+  daysAhead: 14,     // how many days can be booked in advance
+  leadMinutes: 30,   // a slot must start at least this many minutes from now
+
+  // Pickup place
+  placeName: "SUB Café",
+  placeAddress: "Platz der Göttinger Sieben 1, 37073 Göttingen",
+  mapsQuery: "SUB Göttingen, Platz der Göttinger Sieben 1, 37073 Göttingen"
+};
