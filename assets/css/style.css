@@ -772,3 +772,9 @@ body { background: var(--bg); }
   background: var(--ink); border-color: var(--ink); color: #FBF7EF;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 10px 22px -12px rgba(29,27,23,.6);
 }
+
+/* hero without headline: showcase first, actions below */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.hero { padding-top: clamp(28px, 5vw, 56px); }
+.hero .showcase { margin-top: 0; }
+.hero .hero-actions { margin-top: clamp(28px, 4vw, 40px); }
