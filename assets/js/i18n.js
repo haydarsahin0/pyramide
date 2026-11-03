@@ -17,6 +17,8 @@ window.PYRAMIDE_I18N = {
     "hero.buy": "Reservieren",
     "hero.how": "So funktioniert’s",
     "hero.note": "Bezahlung in bar bei Abholung · SUB Café, 2. OG",
+    "hero.chip.cash": "Bar bei Abholung",
+    "hero.chip.place": "SUB Café · 2. OG",
 
     "feat.title": "Ein Sticker.<br>Mehr braucht es nicht.",
     "feat.1.t": "Ein Design",
@@ -165,6 +167,8 @@ window.PYRAMIDE_I18N = {
     "hero.buy": "Reserve",
     "hero.how": "How it works",
     "hero.note": "Pay in cash at pickup · SUB Café, 2nd floor",
+    "hero.chip.cash": "Cash at pickup",
+    "hero.chip.place": "SUB Café · 2nd floor",
 
     "feat.title": "One sticker.<br>That’s all it takes.",
     "feat.1.t": "One design",

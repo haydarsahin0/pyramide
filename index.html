@@ -18,6 +18,10 @@
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
+  <div class="bg" aria-hidden="true">
+    <span class="orb o1"></span><span class="orb o2"></span><span class="orb o3"></span><span class="orb o4"></span><span class="orb o5"></span>
+    <span class="grain"></span>
+  </div>
   <div class="preview-banner" id="previewBanner" hidden><span data-i18n="preview.banner"></span></div>
 
   <header class="nav" id="nav">
@@ -49,7 +53,7 @@
     <!-- ───────────── SHOP ───────────── -->
     <div class="view" data-view="shop">
       <section class="hero" id="sticker">
-        <p class="eyebrow reveal" data-i18n="hero.eyebrow"></p>
+        <p class="eyebrow reveal">Pyramide Göttingen</p>
         <h1 class="hero-title reveal" data-i18n-html="hero.title"></h1>
         <p class="hero-sub reveal" data-i18n="hero.sub"></p>
         <div class="hero-actions reveal">
@@ -59,17 +63,31 @@
           <a class="btn-link" href="#how" data-scroll><span data-i18n="hero.how"></span> <span aria-hidden="true">›</span></a>
         </div>
 
-        <div class="stage reveal">
-          <div class="stage-glow" aria-hidden="true"></div>
-          <div class="tilt" id="tilt">
-            <img class="sticker" src="assets/img/sticker.svg" width="520" height="520" data-i18n-alt="img.alt" alt="">
+        <div class="showcase reveal">
+          <span class="deco dh1" aria-hidden="true"></span><span class="deco dh2" aria-hidden="true"></span>
+          <span class="float-glass fg1" aria-hidden="true"></span>
+          <span class="float-glass fg2" aria-hidden="true"></span>
+          <span class="float-glass fg3" aria-hidden="true"></span>
+          <div class="show-panel">
+            <div class="show-stage">
+              <div class="show-glow" aria-hidden="true"></div>
+              <div class="tilt" id="tilt">
+                <img class="sticker" src="assets/img/sticker.svg" width="520" height="520" data-i18n-alt="img.alt" alt="">
+              </div>
+              <div class="stage-shadow" aria-hidden="true"></div>
+            </div>
+            <span class="chip chip-tl"><span class="chip-dot"></span><span data-i18n="hero.eyebrow"></span></span>
+            <span class="chip chip-tr chip-price" data-price></span>
+            <span class="chip chip-bl">
+              <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="3.5" y="8.5" width="25" height="15" rx="3"/><circle cx="16" cy="16" r="3.6"/></svg>
+              <span data-i18n="hero.chip.cash"></span>
+            </span>
+            <span class="chip chip-br">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+              <span data-i18n="hero.chip.place"></span>
+            </span>
           </div>
-          <div class="stage-shadow" aria-hidden="true"></div>
         </div>
-        <p class="hero-note reveal">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
-          <span data-i18n="hero.note"></span>
-        </p>
       </section>
 
       <section class="section rules-section" id="rules">
@@ -96,6 +114,7 @@
       </section>
 
       <section class="section features">
+        <span class="deco df1" aria-hidden="true"></span><span class="deco df2" aria-hidden="true"></span>
         <h2 class="section-title reveal" data-i18n-html="feat.title"></h2>
         <div class="feature-grid">
           <article class="feature reveal">
@@ -117,6 +136,7 @@
       </section>
 
       <section class="section how" id="how">
+        <span class="deco dw1" aria-hidden="true"></span><span class="deco dw2" aria-hidden="true"></span>
         <p class="eyebrow reveal" data-i18n="how.eyebrow"></p>
         <h2 class="section-title reveal" data-i18n="how.title"></h2>
         <ol class="steps">
@@ -128,6 +148,7 @@
       </section>
 
       <section class="section pickup" id="pickup">
+        <span class="deco dp1" aria-hidden="true"></span>
         <div class="pickup-card reveal">
           <div class="pickup-text">
             <p class="eyebrow" data-i18n="pickup.eyebrow"></p>
@@ -144,6 +165,7 @@
       </section>
 
       <section class="section faq">
+        <span class="deco dq1" aria-hidden="true"></span><span class="deco dq2" aria-hidden="true"></span>
         <h2 class="section-title reveal" data-i18n="faq.title"></h2>
         <div class="faq-list reveal">
           <details><summary data-i18n="faq.0.q"></summary><p data-i18n="faq.0.a"></p></details>
