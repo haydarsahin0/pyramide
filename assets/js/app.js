@@ -6,7 +6,6 @@
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
-  const LIVE_PAY = !!cfg.stripePaymentLink;
   const LIVE_DB = !!(cfg.supabaseUrl && cfg.supabaseAnonKey);
   const ORDER_RE = /^PYR-[A-HJ-NP-Z2-9]{6}$/;
   const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -27,6 +26,7 @@
     taken: new Set(),
     loadingTaken: false,
     slot: null,                             // ms timestamp
+    qty: 1,
     existing: null                          // ms timestamp of an earlier booking
   };
 
@@ -43,6 +43,7 @@
     return s;
   };
   const locale = () => (state.lang === "de" ? "de-DE" : "en-GB");
+  const money = (n) => new Intl.NumberFormat(locale(), { style: "currency", currency: "EUR", minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(n);
   const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   /* ── i18n ──────────────────────────────────── */
@@ -57,8 +58,7 @@
     const md = $('meta[name="description"]'); if (md) md.content = t("meta.desc");
     $$(".lang-btn").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === state.lang)));
 
-    const price = new Intl.NumberFormat(locale(), { style: "currency", currency: "EUR", minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(cfg.priceEur);
-    $$("[data-price]").forEach((el) => { el.textContent = price; });
+    $$("[data-price]").forEach((el) => { el.textContent = money(cfg.priceEur); });
 
     if (currentView === "book") renderBooking();
     if (currentView === "done") renderDone();
@@ -70,7 +70,7 @@
   $$("[data-maps]").forEach((a) => { a.href = mapsUrl; });
   $$("[data-address]").forEach((el) => { el.textContent = cfg.placeAddress; });
   $("#year").textContent = new Date().getFullYear();
-  $("#previewBanner").hidden = LIVE_PAY && LIVE_DB;
+  $("#previewBanner").hidden = LIVE_DB;
 
   /* ── toast ─────────────────────────────────── */
   let toastTimer;
@@ -93,11 +93,9 @@
     if (s.startsWith("PYR")) s = s.slice(3);
     return "PYR-" + s;
   }
-  function setOrder(no, demo = false) {
-    state.order = { no, demo };
+  function setOrder(no) {
+    state.order = { no };
     store.set("current", state.order);
-    const all = store.get("orders", []);
-    if (!all.some((o) => o.no === no)) { all.push({ no, demo, ts: Date.now() }); store.set("orders", all); }
   }
 
   /* ── views & routing ───────────────────────── */
@@ -149,50 +147,22 @@
     requestAnimationFrame(() => target.scrollIntoView({ behavior: "smooth", block: "start" }));
   }));
 
-  /* ── buy ───────────────────────────────────── */
+  /* ── reserve ─────────────────────────────── */
   $$("[data-buy]").forEach((btn) => btn.addEventListener("click", () => {
-    const no = newOrderNo();
-    if (LIVE_PAY) {
-      store.set("pending", { no, ts: Date.now() });
-      const u = new URL(cfg.stripePaymentLink);
-      u.searchParams.set("client_reference_id", no);
-      u.searchParams.set("locale", state.lang);
-      btn.classList.add("is-loading");
-      location.href = u.toString();
-    } else {
-      setOrder(no, true);
-      $("#ack").checked = false;
-      go("order");
-    }
+    setOrder(newOrderNo());
+    $$(".acks input").forEach((i) => { i.checked = false; });
+    state.qty = 1;
+    go("order");
   }));
-
-  // Back from Stripe: ?paid=1&session_id=cs_...
-  (function handleReturn() {
-    const q = new URLSearchParams(location.search);
-    if (!q.has("paid")) return;
-    const pending = store.get("pending");
-    let no = pending && pending.no;
-    if (!no || !ORDER_RE.test(no)) {
-      // Different browser/tab: derive a stable number from the Stripe session id
-      const sid = (q.get("session_id") || "").replace(/[^A-Za-z0-9]/g, "");
-      let h = 2166136261;
-      for (const c of sid || String(Date.now())) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
-      let s = ""; for (let i = 0; i < 6; i++) { s += ALPHABET[h % 32]; h = Math.floor(h / 32) ^ Math.imul(h, 2654435761) >>> 0; }
-      no = "PYR-" + s;
-    }
-    setOrder(no, false);
-    store.del("pending");
-    history.replaceState(null, "", location.pathname + "#/order");
-  })();
 
   /* ── order view ────────────────────────────── */
   function renderOrder() {
     if (!state.order) return;
     $("#orderNo").textContent = state.order.no;
-    $("#orderDemo").hidden = !state.order.demo;
-    $("#toBooking").disabled = !$("#ack").checked;
+    updateAcks();
   }
-  $("#ack").addEventListener("change", (e) => { $("#toBooking").disabled = !e.target.checked; });
+  const updateAcks = () => { $("#toBooking").disabled = !$$(".acks input").every((i) => i.checked); };
+  $$(".acks input").forEach((i) => i.addEventListener("change", updateAcks));
   $("#toBooking").addEventListener("click", () => go("book"));
 
   $("#copyOrder").addEventListener("click", async () => {
@@ -233,6 +203,8 @@
     x.fillText(cfg.placeName + (state.lang === "de" ? ", 2. OG" : ", 2nd floor"), W / 2, 1140);
     x.fillStyle = "#8F877A"; x.font = font(400, 28);
     x.fillText(cfg.placeAddress, W / 2, 1190);
+    x.fillStyle = "#8C5E2A"; x.font = font(600, 30);
+    x.fillText(t("img.rules"), W / 2, 1270);
     c.toBlob((blob) => {
       if (!blob) return;
       const a = document.createElement("a");
@@ -301,14 +273,17 @@
       const res = await rpc("pyramide_get_booking", { p_order: no });
       return res && res.slot ? Date.parse(res.slot) : null;
     },
-    async book({ no, slot, name, email }) {
+    async book({ no, slot, name, email, qty }) {
       if (!LIVE_DB) {
         const list = store.get("demo_taken", []).filter((x) => x.order !== no);
         if (list.some((x) => x.ts === slot)) return { ok: false, error: "slot_taken" };
         list.push({ ts: slot, order: no }); store.set("demo_taken", list);
+        const all = store.get("demo_bookings", []).filter((b) => b.order_no !== no);
+        all.push({ order_no: no, slot: new Date(slot).toISOString(), name, email: email || null, qty, lang: state.lang, picked_up: false, created_at: new Date().toISOString() });
+        store.set("demo_bookings", all);
         return { ok: true };
       }
-      return rpc("pyramide_book", { p_order: no, p_slot: new Date(slot).toISOString(), p_name: name, p_email: email || null, p_lang: state.lang });
+      return rpc("pyramide_book", { p_order: no, p_slot: new Date(slot).toISOString(), p_name: name, p_email: email || null, p_lang: state.lang, p_qty: qty });
     }
   };
 
@@ -322,6 +297,7 @@
     const saved = store.get("booking:" + state.order.no);
     if (saved && !$("#fName").value) $("#fName").value = saved.name || "";
     if (saved && !$("#fEmail").value) $("#fEmail").value = saved.email || "";
+    if (saved && saved.qty) state.qty = saved.qty;
     state.dayIndex = Math.max(0, state.days.findIndex((d) => d.slots.some((s) => !s.past)));
     renderBooking();
     await loadTaken();
@@ -396,6 +372,10 @@
     sum.classList.toggle("is-set", !!state.slot);
     $("#summaryText").textContent = state.slot ? fmtWhen(state.slot) : t("book.pick");
     $("#confirmBtn").disabled = !state.slot;
+    $("#qtyVal").textContent = state.qty;
+    $("#qtyMinus").disabled = state.qty <= 1;
+    $("#qtyPlus").disabled = state.qty >= cfg.maxQty;
+    $("#cashTotal").textContent = money(state.qty * cfg.priceEur);
   }
 
   function renderTimesStatus() {
@@ -423,6 +403,9 @@
     if (matchMedia("(max-width: 900px)").matches) $("#bookForm").scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
+  $("#qtyMinus").addEventListener("click", () => { if (state.qty > 1) { state.qty--; renderBooking(); } });
+  $("#qtyPlus").addEventListener("click", () => { if (state.qty < cfg.maxQty) { state.qty++; renderBooking(); } });
+
   $("#bookForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const err = $("#formError");
@@ -437,15 +420,16 @@
     const btn = $("#confirmBtn");
     btn.classList.add("is-loading"); btn.disabled = true;
     try {
-      const res = await api.book({ no: state.order.no, slot: state.slot, name, email });
+      const res = await api.book({ no: state.order.no, slot: state.slot, name, email, qty: state.qty });
       if (!res || !res.ok) {
         const code = res && res.error;
         if (code === "slot_taken") { state.taken.add(state.slot); state.slot = null; renderBooking(); showErr("book.err.taken"); loadTaken(); }
         else if (code === "invalid_order") showErr("book.err.order");
+        else if (code === "already_picked_up") showErr("book.err.picked");
         else showErr("book.err.invalid");
         return;
       }
-      store.set("booking:" + state.order.no, { slot: state.slot, name, email });
+      store.set("booking:" + state.order.no, { slot: state.slot, name, email, qty: state.qty });
       go("done");
     } catch {
       showErr("book.err.network");
@@ -466,6 +450,12 @@
       + " – " + new Intl.DateTimeFormat(locale(), { timeZone: cfg.timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(b.slot + cfg.slotMinutes * 60000);
     $("#donePlace").textContent = cfg.placeName + (state.lang === "de" ? ", 2. OG" : ", 2nd floor");
     $("#doneOrder").textContent = state.order.no;
+    const qty = b.qty || 1;
+    $("#doneQty").textContent = `${qty} × ${money(cfg.priceEur)} = ${money(qty * cfg.priceEur)}`;
+    const time = new Intl.DateTimeFormat(locale(), { timeZone: cfg.timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(b.slot);
+    $("#bringCash").textContent = t("done.bring.cash", { amount: money(qty * cfg.priceEur) });
+    $("#bringTime").textContent = t("done.bring.time", { time });
+    $("#bringOrder").textContent = t("done.bring.order", { order: state.order.no });
   }
 
   $("#rescheduleBtn").addEventListener("click", () => go("book"));
@@ -484,7 +474,7 @@
       `DTEND:${fmt(b.slot + cfg.slotMinutes * 60000)}`,
       `SUMMARY:${esc(t("done.ics.title"))}`,
       `LOCATION:${esc(place)}`,
-      `DESCRIPTION:${esc(t("done.order") + ": " + state.order.no)}`,
+      `DESCRIPTION:${esc(t("done.ics.desc", { order: state.order.no, amount: money((b.qty || 1) * cfg.priceEur) }))}`,
       "BEGIN:VALARM", "TRIGGER:-PT1H", "ACTION:DISPLAY", `DESCRIPTION:${esc(t("done.ics.title"))}`, "END:VALARM",
       "END:VEVENT", "END:VCALENDAR"
     ].join("\r\n");
@@ -512,8 +502,7 @@
     e.preventDefault();
     const no = normalizeOrder($("#lookupInput").value);
     if (!ORDER_RE.test(no)) { $("#lookupError").hidden = false; return; }
-    const known = store.get("orders", []).find((o) => o.no === no);
-    setOrder(no, known ? known.demo : false);
+    setOrder(no);
     closeLookup();
     if (currentView === "book") enterBooking(); else go("book");
   });

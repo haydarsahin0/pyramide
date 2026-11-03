@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Pyramide · Admin</title>
+  <meta name="theme-color" content="#F6F1E7">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .a-wrap { max-width: 1080px; margin: 0 auto; padding: 32px var(--gutter) 80px; }
+    .a-login { min-height: calc(100vh - var(--nav-h)); display: grid; place-items: center; padding: 24px var(--gutter); }
+    .a-login .card { width: 100%; max-width: 400px; text-align: center; padding: 36px 28px 28px; }
+    .a-login h1 { font-size: 28px; letter-spacing: -0.03em; margin: 18px 0 6px; }
+    .a-login p { color: var(--ink-2); font-size: 15px; margin-bottom: 22px; }
+    .a-login img { width: 72px; height: 72px; margin: 0 auto; }
+    .a-login input { width: 100%; height: 50px; padding: 0 16px; border-radius: var(--radius-sm); border: 1px solid var(--line-strong); background: #FFFEFB; font-size: 16px; outline: none; margin-bottom: 12px; }
+    .a-login input:focus { border-color: var(--ink); box-shadow: 0 0 0 4px rgba(29,27,23,.07); }
+
+    .a-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }
+    .a-top h1 { font-size: clamp(32px, 5vw, 44px); letter-spacing: -0.04em; font-weight: 700; }
+    .a-top .eyebrow { margin-bottom: 8px; }
+    .a-tools { display: flex; gap: 8px; }
+    .a-tools .btn { height: 38px; padding: 0 16px; font-size: 14px; }
+    .a-updated { font-size: 12.5px; color: var(--ink-3); margin-top: 6px; }
+
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+    .stat { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-card); padding: 20px 22px; }
+    .stat-k { font-size: 13px; color: var(--ink-3); font-weight: 500; }
+    .stat-v { font-size: 32px; font-weight: 700; letter-spacing: -0.03em; margin-top: 6px; font-variant-numeric: tabular-nums; }
+    .stat-s { font-size: 12.5px; color: var(--ink-3); margin-top: 2px; }
+    .stat.dark { background: var(--ink); color: #F6F1E7; }
+    .stat.dark .stat-k, .stat.dark .stat-s { color: rgba(246,241,231,.6); }
+
+    .a-bar { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+    .seg { display: flex; padding: 3px; gap: 2px; background: rgba(29,27,23,.055); border-radius: 999px; }
+    .seg button { height: 34px; padding: 0 16px; border-radius: 999px; font-size: 14px; font-weight: 500; color: var(--ink-2); transition: background .2s, color .2s; }
+    .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(60,44,22,.1); }
+    .seg .count { color: var(--ink-3); font-weight: 400; margin-left: 4px; font-size: 13px; }
+    .search { height: 40px; width: min(320px, 100%); padding: 0 16px 0 40px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238F877A' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M16 16l4 4'/%3E%3C/svg%3E") no-repeat 14px center / 16px; font-size: 15px; outline: none; }
+    .search:focus { border-color: var(--ink); }
+
+    .day-group { margin-bottom: 22px; }
+    .day-h { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; padding: 0 6px 10px; }
+    .day-h strong { font-size: 17px; letter-spacing: -0.02em; }
+    .day-h span { font-size: 13px; color: var(--ink-3); }
+    .day-h .today { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: var(--gold-soft); color: #4E3716; font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; vertical-align: 2px; }
+    .rows { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-card); overflow: hidden; }
+    .row { display: grid; grid-template-columns: 74px 1.5fr 70px 80px 120px 150px 36px; gap: 14px; align-items: center; padding: 14px 18px; }
+    .row + .row { border-top: 1px solid var(--line); }
+    .row.done { background: rgba(63,122,82,.04); }
+    .row.done .r-name, .row.done .r-time { color: var(--ink-3); }
+    .r-time { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .r-name { font-weight: 600; overflow-wrap: anywhere; }
+    .r-email { display: block; font-weight: 400; font-size: 13px; color: var(--ink-3); }
+    .r-email a:hover { text-decoration: underline; }
+    .r-qty { font-variant-numeric: tabular-nums; color: var(--ink-2); }
+    .r-cash { font-weight: 600; font-variant-numeric: tabular-nums; }
+    .r-order { font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 14px; letter-spacing: .03em; user-select: all; }
+    .r-lbl { display: none; font-size: 12px; color: var(--ink-3); font-weight: 400; }
+    .status { height: 34px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--ink-2); transition: background .2s, color .2s, border-color .2s; white-space: nowrap; }
+    .status:hover { border-color: var(--ink); }
+    .status.on { background: var(--ok); border-color: var(--ok); color: #fff; }
+    .status svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+    .del { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--ink-3); transition: background .2s, color .2s; }
+    .del:hover { background: rgba(164,65,46,.1); color: var(--err); }
+    .del svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+    .row-head { padding: 0 18px 8px; font-size: 12px; color: var(--ink-3); font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
+    .row-head + .rows { margin-top: 0; }
+    .empty { text-align: center; padding: 64px 20px; color: var(--ink-3); background: var(--surface); border-radius: var(--radius); }
+
+    @media (max-width: 900px) {
+      .stats { grid-template-columns: 1fr 1fr; }
+      .row-head { display: none; }
+      .row { grid-template-columns: 60px 1fr auto; grid-template-areas: "time name del" "time meta meta" "time status status"; row-gap: 8px; }
+      .r-time { grid-area: time; align-self: start; }
+      .r-name { grid-area: name; }
+      .r-meta { grid-area: meta; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; }
+      .r-meta > * { display: inline; }
+      .r-lbl { display: inline; margin-right: 4px; }
+      .r-st { grid-area: status; }
+      .del { grid-area: del; }
+    }
+    @media (min-width: 901px) { .r-meta { display: contents; } }
+    @media (max-width: 560px) {
+      .stat-v { font-size: 26px; }
+      .a-bar { flex-direction: column; }
+      .seg { overflow-x: auto; }
+      .search { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="preview-banner" id="previewBanner" hidden>Önizleme modu — veritabanı bağlı değil. Sadece bu tarayıcıda yapılan test rezervasyonları gösteriliyor.</div>
+
+  <header class="nav" id="nav">
+    <div class="nav-inner">
+      <a class="brand" href="./" aria-label="Pyramide Göttingen">
+        <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.2 3.9a1.4 1.4 0 0 0-2.4 0L2.4 18.6A1.4 1.4 0 0 0 3.6 20.7h16.8a1.4 1.4 0 0 0 1.2-2.1Z"/></svg>
+        <span class="brand-name">Pyramide</span><span class="brand-city">Admin</span>
+      </a>
+      <div class="nav-right">
+        <button class="nav-book" type="button" id="logout" hidden>Çıkış</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- login -->
+  <section class="a-login" id="loginView" hidden>
+    <form class="card" id="loginForm">
+      <img src="assets/img/sticker.svg" alt="">
+      <h1>Admin paneli</h1>
+      <p>Rezervasyonları görmek için şifreni gir.</p>
+      <input type="password" id="pw" autocomplete="current-password" placeholder="Şifre" required>
+      <p class="form-error" id="loginErr" hidden></p>
+      <button class="btn btn-primary btn-lg btn-block" type="submit" id="loginBtn">Giriş</button>
+    </form>
+  </section>
+
+  <!-- dashboard -->
+  <main class="a-wrap" id="dash" hidden>
+    <div class="a-top">
+      <div>
+        <p class="eyebrow" lang="de">Pyramide Göttingen</p>
+        <h1>Rezervasyonlar</h1>
+        <p class="a-updated" id="updated"></p>
+      </div>
+      <div class="a-tools">
+        <button class="btn btn-soft" type="button" id="csvBtn">CSV indir</button>
+        <button class="btn btn-primary" type="button" id="refreshBtn">Yenile</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat dark"><div class="stat-k">Bugün</div><div class="stat-v" id="sToday">0</div><div class="stat-s" id="sTodaySub"></div></div>
+      <div class="stat"><div class="stat-k">Yaklaşan rezervasyon</div><div class="stat-v" id="sUpcoming">0</div><div class="stat-s" id="sUpcomingSub"></div></div>
+      <div class="stat"><div class="stat-k">Beklenen nakit</div><div class="stat-v" id="sCash">0 €</div><div class="stat-s">teslim edilmemiş tüm rezervasyonlar</div></div>
+      <div class="stat"><div class="stat-k">Teslim edilen</div><div class="stat-v" id="sDone">0</div><div class="stat-s" id="sDoneSub"></div></div>
+    </div>
+
+    <div class="a-bar">
+      <div class="seg" id="filters">
+        <button type="button" data-f="today" aria-pressed="false">Bugün<span class="count" id="cToday"></span></button>
+        <button type="button" data-f="upcoming" aria-pressed="true">Yaklaşan<span class="count" id="cUpcoming"></span></button>
+        <button type="button" data-f="past" aria-pressed="false">Geçmiş<span class="count" id="cPast"></span></button>
+        <button type="button" data-f="all" aria-pressed="false">Tümü<span class="count" id="cAll"></span></button>
+      </div>
+      <input class="search" id="q" type="search" placeholder="İsim, Bestellnummer, e-posta…" autocomplete="off">
+    </div>
+
+    <div id="list"></div>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/admin.js"></script>
+</body>
+</html>

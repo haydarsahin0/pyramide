@@ -471,3 +471,66 @@ p { margin: 0; }
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
   .reveal { opacity: 1; transform: none; }
 }
+
+/* ── rules (cash + punctuality) ─────────────── */
+.rules-section { padding-top: clamp(40px, 6vw, 72px); }
+.rules {
+  background: var(--ink); color: #F6F1E7;
+  border-radius: var(--radius-lg);
+  padding: clamp(36px, 6vw, 64px);
+  display: grid; grid-template-columns: 1fr 1.6fr; gap: clamp(28px, 5vw, 64px); align-items: start;
+  position: relative; overflow: hidden;
+}
+.rules::before {
+  content: ""; position: absolute; left: -120px; bottom: -160px; width: 420px; height: 420px;
+  background: radial-gradient(closest-side, rgba(228,181,106,.22), rgba(228,181,106,0));
+  pointer-events: none;
+}
+.rules .eyebrow { color: var(--gold); }
+.rules .section-title { font-size: clamp(32px, 4.4vw, 48px); }
+.rules-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; position: relative; }
+.rule {
+  position: relative;
+  background: rgba(246, 241, 231, .06);
+  border: 1px solid rgba(246, 241, 231, .1);
+  border-radius: var(--radius);
+  padding: 26px 24px 28px;
+}
+.rule-icon { width: 32px; height: 32px; fill: none; stroke: var(--gold); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; margin-bottom: 22px; }
+.rule-no { position: absolute; top: 22px; right: 24px; font-size: 13px; font-weight: 600; color: rgba(246,241,231,.4); font-variant-numeric: tabular-nums; }
+.rule h3 { font-size: 22px; letter-spacing: -0.025em; margin-bottom: 8px; }
+.rule p { color: rgba(246, 241, 231, .7); font-size: 15.5px; line-height: 1.5; }
+
+/* order confirmations */
+.acks { border: 0; margin: 28px auto 20px; padding: 20px 22px 8px; max-width: 560px; text-align: left; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-card); }
+.acks legend { float: left; width: 100%; font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; padding: 0; }
+.acks .ack { justify-content: flex-start; margin: 0; padding: 12px 0; border-top: 1px solid var(--line); clear: both; }
+.acks .ack:first-of-type { border-top: 0; }
+
+/* quantity + cash */
+.qty-field { display: flex; align-items: center; justify-content: space-between; }
+.qty-field > span { margin: 0; }
+.qty { display: flex; align-items: center; gap: 4px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 4px; }
+.qty output { min-width: 32px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+.qty-btn { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); box-shadow: 0 1px 2px rgba(60,44,22,.1); transition: opacity .2s; }
+.qty-btn:disabled { opacity: .35; cursor: default; }
+.qty-btn svg { width: 14px; height: 14px; fill: none; stroke: var(--ink); stroke-width: 2.2; stroke-linecap: round; }
+.cash-total { display: flex; justify-content: space-between; align-items: baseline; padding: 14px 0 6px; margin-top: 4px; border-top: 1px solid var(--line); font-size: 15px; color: var(--ink-2); }
+.cash-total strong { font-size: 22px; letter-spacing: -0.02em; color: var(--ink); }
+.form-hint { margin-top: 12px; font-size: 13px; color: var(--ink-3); text-align: center; }
+
+/* done: bring list */
+.bring { margin: 16px auto 0; max-width: 560px; text-align: left; background: var(--ink); color: #F6F1E7; border-radius: var(--radius-lg); padding: 24px 28px 14px; }
+.bring-title { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
+.bring ul { list-style: none; margin: 0; padding: 0; }
+.bring li { display: flex; align-items: center; gap: 14px; padding: 12px 0; font-size: 17px; font-weight: 500; }
+.bring li + li { border-top: 1px solid rgba(246,241,231,.12); }
+.bring svg { width: 24px; height: 24px; flex: none; fill: none; stroke: var(--gold); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+@media (max-width: 900px) {
+  .rules { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .rules-grid { grid-template-columns: 1fr; }
+  .bring { padding: 20px 20px 10px; }
+}

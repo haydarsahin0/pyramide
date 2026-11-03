@@ -1,63 +1,64 @@
 # Pyramide Göttingen
 
-Tek ürünlü sticker sitesi — Almanca / İngilizce, Stripe ile ödeme, SUB Café (2. kat) teslim randevusu.
-Saf HTML/CSS/JS; GitHub Pages'te build gerektirmeden çalışır.
+Tek ürünlü sticker sitesi: Almanca / İngilizce, **ödeme teslimde nakit**, SUB Café (2. kat) teslim randevusu ve sana özel admin paneli.
+Sadece HTML/CSS/JS kullanıyor; GitHub Pages'te build adımı gerekmeden çalışıyor.
 
-**Canlı adres:** https://haydarsahin0.github.io/pyramide/
+- **Site:** https://haydarsahin0.github.io/pyramide/
+- **Admin paneli:** https://haydarsahin0.github.io/pyramide/admin.html (sitede linki yok, şifreyle giriliyor)
 
-## Akış
+## Müşteri akışı
 
-1. Ziyaretçi **Kaufen / Buy** butonuna basar → site `PYR-XXXXXX` biçiminde bir sipariş numarası üretir.
-2. Stripe Payment Link'e yönlendirilir; sipariş numarası `client_reference_id` olarak Stripe'a gider
-   (Stripe panelinde ödemenin detayında görünür).
-3. Ödeme sonrası siteye geri döner → sipariş numarası gösterilir, kaydetmesi istenir (kopyala / resim olarak kaydet).
-4. Takvim açılır: her gün 10:00–20:00, 30 dakikalık slotlar. Dolu saatler seçilemez.
-5. Onay ekranı + takvime ekle (.ics) + yol tarifi.
+1. **Reservieren / Reserve** → site `PYR-XXXXXX` biçiminde bir sipariş numarası (Bestellnummer) üretir.
+2. Numara gösterilir; kopyalanabilir veya resim olarak kaydedilebilir. Devam etmek için müşteri üç şeyi işaretlemek zorundadır:
+   numarayı kaydettim · parayı nakit getireceğim · randevuya zamanında geleceğim.
+3. Takvim: her gün 10:00–20:00, 30 dakikalık saatler. Dolu saatler seçilemez. Adet (1–5) seçilir, getirilecek nakit tutarı gösterilir.
+4. Onay ekranında "Bitte denk daran" kartı yer alır (nakit tutarı, saat, numara). Ayrıca takvime ekleme (.ics) ve yol tarifi vardır.
 
-Ziyaretçi sonradan sağ üstteki **Termin buchen** ile sipariş numarasını girip randevu alabilir veya değiştirebilir.
+İki kural ("Bargeld mitbringen", "Pünktlich sein") ana sayfada büyük siyah bir kartta, kuralların özeti de SSS'te ve her adımda tekrar gösterilir.
+Müşteri sağ üstteki **Termin buchen** ile numarasını girip randevusunu değiştirebilir.
+
+## Admin paneli
+
+- Bugün / yaklaşan / geçmiş / tümü filtreleri, isim–numara–e-posta araması
+- Her rezervasyonda saat, isim, e-posta, adet, alınacak nakit ve Bestellnummer görünür
+- "Teslim edildi" düğmesi; rezervasyon silme (silinen saat tekrar boşa çıkar)
+- Özet kartlar: bugünkü rezervasyonlar, beklenen nakit, teslim edilenler
+- CSV olarak dışa aktarma (Excel'de açılır)
+- Sayfa her dakika kendini yeniler
 
 ## Canlıya alma
 
-Ayarların hepsi `assets/js/config.js` içinde. İkisi de boşken site **önizleme modunda** çalışır
-(üstte ince bir uyarı şeridi görünür, ödeme simüle edilir, randevular sadece tarayıcıda tutulur).
+### 1. Supabase (randevular + admin)
 
-### 1. Stripe
+Veritabanı bağlanana kadar site **önizleme modunda** çalışır: üstte ince bir uyarı şeridi görünür ve rezervasyonlar sadece o tarayıcıda tutulur.
 
-1. Stripe Dashboard → **Payment Links** → **New**.
-2. Ürün: "Pyramide Sticker", fiyat **6,00 EUR** (tek seferlik). İstersen *Let customers adjust quantity* açık olsun.
-3. **After payment** → *Don't show confirmation page* → *Redirect customers to your website*:
+1. Supabase → SQL Editor → `supabase/schema.sql` dosyasının içeriğini çalıştır.
+2. Admin şifreni belirle (en az 10 karakter), yine SQL Editor'de:
+   ```sql
+   select public.pyramide_admin_set_password('buraya-uzun-bir-sifre');
    ```
-   https://haydarsahin0.github.io/pyramide/?paid=1&session_id={CHECKOUT_SESSION_ID}
-   ```
-4. Oluşan linki (`https://buy.stripe.com/...`) `config.js` → `stripePaymentLink` alanına yapıştır.
+3. Project Settings → API: Project URL'i `assets/js/config.js` → `supabaseUrl` alanına,
+   *anon / publishable* anahtarı `supabaseAnonKey` alanına yaz.
 
-Teslimde: müşterinin söylediği numarayı Stripe → Payments → ödeme detayındaki **Client reference ID** ile karşılaştır.
+Ziyaretçiler tabloyu doğrudan okuyamaz. Sadece hangi saatlerin dolu olduğunu görebilir ve kendi numaraları için randevu alabilir.
+Tüm bilgileri yalnızca doğru admin şifresi açar; yanlış denemeler sunucuda yavaşlatılır.
 
-### 2. Supabase (randevular)
+### 2. GitHub Pages
 
-1. Supabase'de bir proje aç (veya mevcut birini kullan) → **SQL Editor** → `supabase/schema.sql` içeriğini çalıştır.
-2. **Project Settings → API**: Project URL'i `supabaseUrl`, *anon / publishable* anahtarı `supabaseAnonKey` alanına yaz.
-3. Randevuları **Table Editor → pyramide_bookings** (veya `pyramide_bookings_berlin` görünümü, Berlin saatiyle) üzerinden görürsün.
-   Teslim ettiğinde `picked_up` alanını `true` yapabilirsin.
-
-Ziyaretçiler tabloyu doğrudan okuyamaz; sadece hangi saatlerin dolu olduğunu görebilir ve kendi sipariş numaraları için randevu alabilir/değiştirebilir.
-
-### 3. GitHub Pages
-
-Repo → **Settings → Pages** → *Build and deployment* → **Deploy from a branch** → bu branch'i ve `/ (root)` klasörünü seç → Save.
-Birkaç dakika içinde site yukarıdaki adreste yayında olur.
+Repo → **Settings → Pages** → *Deploy from a branch* → bu branch ve `/ (root)` → Save.
 
 ## Yapı
 
 ```
-index.html             tek sayfa (mağaza, sipariş no, takvim, onay)
+index.html             müşteri sitesi (ürün, kurallar, sipariş no, takvim, onay)
+admin.html             admin paneli
 assets/css/style.css   tasarım
-assets/js/config.js    Stripe / Supabase / saat ayarları
+assets/js/config.js    Supabase, fiyat, adet ve saat ayarları
 assets/js/i18n.js      DE + EN metinler
-assets/js/app.js       mantık
+assets/js/app.js       site mantığı
+assets/js/admin.js     admin mantığı
 assets/img/            sticker, bayraklar, ikonlar
-supabase/schema.sql    randevu tablosu + fonksiyonlar
+supabase/schema.sql    tablo + fonksiyonlar
 ```
 
-Saatleri değiştirmek için `config.js` içindeki `openHour`, `closeHour`, `slotMinutes`, `daysAhead`
-ve aynı değerleri `supabase/schema.sql` → `pyramide_book` içindeki kontrolde güncelle.
+Saatleri veya en fazla adedi değiştirirsen aynı değerleri `supabase/schema.sql` → `pyramide_book` içindeki kontrollerde de güncelle.

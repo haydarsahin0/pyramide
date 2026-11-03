@@ -3,17 +3,14 @@
  * Fill these in to go live. See README.md for step-by-step setup.
  */
 window.PYRAMIDE_CONFIG = {
-  // Stripe Payment Link (Stripe Dashboard → Payment Links → Create).
-  // Example: "https://buy.stripe.com/abc123XYZ"
-  stripePaymentLink: "",
-
   // Supabase project for appointment bookings (Project Settings → API).
   // Example url: "https://xxxxxxxxxxxx.supabase.co"
   supabaseUrl: "",
   supabaseAnonKey: "",
 
   // Product
-  priceEur: 6,
+  priceEur: 6,       // paid in cash at pickup
+  maxQty: 5,         // stickers per reservation
 
   // Pickup schedule (Europe/Berlin time)
   timezone: "Europe/Berlin",
