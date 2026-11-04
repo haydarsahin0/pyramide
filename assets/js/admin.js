@@ -19,6 +19,7 @@
 
   const state = { pw: ss.get("pw"), rows: [], filter: "upcoming", q: "" };
 
+  const cash = (rows) => rows.reduce((s, r) => s + cfg.total(r.qty || 1), 0);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const money = (n) => new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(n);
   const dayKey = (ts) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(ts);
@@ -103,17 +104,17 @@
 
     const todays = rows.filter((r) => dayKey(r.ts) === today);
     const upcoming = rows.filter((r) => r.ts + cfg.slotMinutes * 60000 >= now);
-    const openCash = rows.filter((r) => !r.picked_up).reduce((s, r) => s + r.qty * cfg.priceEur, 0);
+    const openCash = cash(rows.filter((r) => !r.picked_up));
     const done = rows.filter((r) => r.picked_up);
     const sum = (a) => a.reduce((s, r) => s + r.qty, 0);
 
     $("#sToday").textContent = todays.length;
-    $("#sTodaySub").textContent = `${sum(todays)} sticker · ${money(sum(todays.filter((r) => !r.picked_up)) * cfg.priceEur)} bekleniyor`;
+    $("#sTodaySub").textContent = `${sum(todays)} sticker · ${money(cash(todays.filter((r) => !r.picked_up)))} bekleniyor`;
     $("#sUpcoming").textContent = upcoming.length;
     $("#sUpcomingSub").textContent = `${sum(upcoming)} sticker`;
     $("#sCash").textContent = money(openCash);
     $("#sDone").textContent = done.length;
-    $("#sDoneSub").textContent = `${sum(done)} sticker · ${money(sum(done) * cfg.priceEur)} alındı`;
+    $("#sDoneSub").textContent = `${sum(done)} sticker · ${money(cash(done))} alındı`;
 
     for (const [f, id] of [["today", "cToday"], ["upcoming", "cUpcoming"], ["past", "cPast"], ["all", "cAll"]]) {
       $("#" + id).textContent = rows.filter((r) => inFilter(r, f, now, today)).length;
@@ -138,7 +139,7 @@
       const label = fmtDay(items[0].ts);
       html += `<section class="day-group">
         <div class="day-h"><strong>${esc(label)}${k === today ? '<span class="today">Bugün</span>' : ""}</strong>
-        <span>${items.length} rezervasyon · ${sum(items)} sticker · ${money(sum(items) * cfg.priceEur)}</span></div>
+        <span>${items.length} rezervasyon · ${sum(items)} sticker · ${money(cash(items))}</span></div>
         <div class="rows">` +
         items.map((r) => `
           <div class="row${r.picked_up ? " done" : ""}">
@@ -146,7 +147,7 @@
             <span class="r-name">${esc(r.name)}${r.online ? '<span class="online-dot" title="Şu an sitede"></span>' : ""}${r.email ? `<span class="r-email"><a href="mailto:${esc(r.email)}">${esc(r.email)}</a></span>` : ""}${r.created_at ? `<span class="r-made">Rezerve: ${esc(fmtStamp(r.created_at))}${r.has_chat ? " · sohbet var" : ""}</span>` : ""}</span>
             <span class="r-meta">
               <span class="r-qty"><span class="r-lbl">Adet</span>${r.qty} ×</span>
-              <span class="r-cash"><span class="r-lbl">Nakit</span>${money(r.qty * cfg.priceEur)}</span>
+              <span class="r-cash"><span class="r-lbl">Nakit</span>${money(cfg.total(r.qty))}</span>
               <span class="r-order"><span class="r-lbl">No</span>${esc(r.order_no)}</span>
             </span>
             <span class="r-st"><button type="button" class="status${r.picked_up ? " on" : ""}" data-pick="${esc(r.order_no)}">
@@ -209,7 +210,7 @@
     const head = ["Tarih", "Saat", "İsim", "E-posta", "Adet", "Nakit (EUR)", "Bestellnummer", "Teslim edildi", "Dil", "Oluşturuldu"];
     const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const lines = [...state.rows].sort((a, b) => a.ts - b.ts).map((r) => [
-      dayKey(r.ts), fmtTime(r.ts), r.name, r.email || "", r.qty, r.qty * cfg.priceEur, r.order_no, r.picked_up ? "evet" : "hayır", r.lang || "", r.created_at || ""
+      dayKey(r.ts), fmtTime(r.ts), r.name, r.email || "", r.qty, cfg.total(r.qty), r.order_no, r.picked_up ? "evet" : "hayır", r.lang || "", r.created_at || ""
     ].map(q).join(";"));
     const blob = new Blob(["﻿" + [head.map(q).join(";"), ...lines].join("\r\n")], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `pyramide-rezervasyonlar-${dayKey(Date.now())}.csv`;
@@ -390,7 +391,7 @@
     const bookingsHtml = b.length ? b.map((x) => `
       <div class="ctx-booking">
         <div class="ctx-line"><span>Bestellnummer</span><span class="mono">${esc(x.order_no)}</span></div>
-        <div class="ctx-line"><span>Adet · nakit</span><span>${x.qty} × = ${money(x.qty * cfg.priceEur)}</span></div>
+        <div class="ctx-line"><span>Adet · nakit</span><span>${x.qty} adet = ${money(cfg.total(x.qty))}</span></div>
         <div class="ctx-line"><span>Teslim randevusu</span><span>${esc(fmtDayShort(x.slot))}</span></div>
         <div class="ctx-line"><span>Rezervasyon yaptı</span><span>${esc(fmtStamp(x.created_at))}</span></div>
         <div class="ctx-line"><span>Durum</span><span>${x.picked_up ? "✓ teslim edildi" : Date.parse(x.slot) < Date.now() ? "randevu geçti" : "bekliyor"}</span></div>

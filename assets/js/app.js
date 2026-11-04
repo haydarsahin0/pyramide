@@ -39,7 +39,7 @@
 
   const t = (key, vars) => {
     let s = (dict[state.lang] && dict[state.lang][key]) ?? dict.de[key] ?? key;
-    vars = Object.assign({ price: money(cfg.priceEur) }, vars);
+    vars = Object.assign({ price: money(cfg.priceEur), extra: money(cfg.priceExtraEur) }, vars);
     for (const [k, v] of Object.entries(vars)) s = s.split("{" + k + "}").join(v);
     return s;
   };
@@ -394,7 +394,7 @@
     $("#qtyVal").textContent = state.qty;
     $("#qtyMinus").disabled = state.qty <= 1;
     $("#qtyPlus").disabled = state.qty >= cfg.maxQty;
-    $("#cashTotal").textContent = money(state.qty * cfg.priceEur);
+    renderDeal();
   }
 
   function renderTimesStatus() {
@@ -421,6 +421,31 @@
     renderBooking();
     if (matchMedia("(max-width: 900px)").matches) $("#bookForm").scrollIntoView({ behavior: "smooth", block: "start" });
   });
+
+  // quantity deal card
+  let dealShown = 0;
+  function renderDeal() {
+    const q = state.qty;
+    const full = q * cfg.priceEur, total = cfg.total(q), saved = full - total;
+    $("#cashTotal").textContent = money(total);
+    $("#cashOld").hidden = !saved;
+    $("#cashOld").textContent = money(full);
+    $("#dealSave").hidden = !saved;
+    $("#dealSave").textContent = t("deal.save", { amount: money(saved) });
+    const add = $("#dealAdd");
+    add.disabled = q >= cfg.maxQty;
+    add.textContent = q >= cfg.maxQty ? t("deal.max", { qty: q }) : t(q === 1 ? "deal.add" : "deal.more");
+    const wrap = $("#dealStickers");
+    let html = "";
+    for (let i = 0; i < q; i++) {
+      html += `<span class="deal-tile${i ? " extra" : ""}${i >= dealShown ? " pop" : ""}"><img src="assets/img/sticker.svg" alt=""><b>${money(i ? cfg.priceExtraEur : cfg.priceEur)}</b></span>`;
+    }
+    if (q < cfg.maxQty) html += `<span class="deal-tile ghost"><span>+</span><b>${money(cfg.priceExtraEur)}</b></span>`;
+    wrap.innerHTML = html;
+    dealShown = q;
+  }
+  $("#dealAdd").addEventListener("click", () => { if (state.qty < cfg.maxQty) { state.qty++; renderBooking(); } });
+  $("#dealStickers").addEventListener("click", (e) => { if (e.target.closest(".ghost") && state.qty < cfg.maxQty) { state.qty++; renderBooking(); } });
 
   $("#qtyMinus").addEventListener("click", () => { if (state.qty > 1) { state.qty--; renderBooking(); } });
   $("#qtyPlus").addEventListener("click", () => { if (state.qty < cfg.maxQty) { state.qty++; renderBooking(); } });
@@ -471,9 +496,9 @@
     $("#donePlace").textContent = cfg.placeName + (state.lang === "de" ? ", 2. OG" : ", 2nd floor");
     $("#doneOrder").textContent = state.order.no;
     const qty = b.qty || 1;
-    $("#doneQty").textContent = `${qty} × ${money(cfg.priceEur)} = ${money(qty * cfg.priceEur)}`;
+    $("#doneQty").textContent = (qty === 1 ? t("deal.line1", { qty }) : t("deal.line", { more: qty - 1 })) + " = " + money(cfg.total(qty));
     const time = new Intl.DateTimeFormat(locale(), { timeZone: cfg.timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(b.slot);
-    $("#bringCash").textContent = t("done.bring.cash", { amount: money(qty * cfg.priceEur) });
+    $("#bringCash").textContent = t("done.bring.cash", { amount: money(cfg.total(qty)) });
     $("#bringTime").textContent = t("done.bring.time", { time });
     $("#bringOrder").textContent = t("done.bring.order", { order: state.order.no });
   }
@@ -494,7 +519,7 @@
       `DTEND:${fmt(b.slot + cfg.slotMinutes * 60000)}`,
       `SUMMARY:${esc(t("done.ics.title"))}`,
       `LOCATION:${esc(place)}`,
-      `DESCRIPTION:${esc(t("done.ics.desc", { order: state.order.no, amount: money((b.qty || 1) * cfg.priceEur) }))}`,
+      `DESCRIPTION:${esc(t("done.ics.desc", { order: state.order.no, amount: money(cfg.total(b.qty || 1)) }))}`,
       "BEGIN:VALARM", "TRIGGER:-PT1H", "ACTION:DISPLAY", `DESCRIPTION:${esc(t("done.ics.title"))}`, "END:VALARM",
       "END:VEVENT", "END:VCALENDAR"
     ].join("\r\n");

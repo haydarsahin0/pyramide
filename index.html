@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=20261104b">
+  <link rel="stylesheet" href="assets/css/style.css?v=20261104c">
 </head>
 <body>
   <div class="bg" aria-hidden="true">
@@ -257,13 +257,25 @@
               <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
               <span id="summaryText" data-i18n="book.pick"></span>
             </div>
-            <div class="field qty-field">
-              <span data-i18n="book.qty"></span>
-              <div class="qty">
-                <button type="button" class="qty-btn" id="qtyMinus" aria-label="−"><svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg></button>
-                <output id="qtyVal">1</output>
-                <button type="button" class="qty-btn" id="qtyPlus" aria-label="+"><svg viewBox="0 0 24 24"><path d="M6 12h12M12 6v12"/></svg></button>
+            <div class="deal" id="deal">
+              <div class="deal-head">
+                <span class="deal-badge" data-i18n="deal.badge"></span>
+                <p class="deal-title" data-i18n-html="deal.title"></p>
               </div>
+              <div class="deal-row">
+                <div class="deal-stickers" id="dealStickers" aria-hidden="true"></div>
+                <div class="qty" role="group" data-i18n-aria="book.qty">
+                  <button type="button" class="qty-btn" id="qtyMinus" aria-label="−"><svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg></button>
+                  <output id="qtyVal" aria-live="polite">1</output>
+                  <button type="button" class="qty-btn" id="qtyPlus" aria-label="+"><svg viewBox="0 0 24 24"><path d="M6 12h12M12 6v12"/></svg></button>
+                </div>
+              </div>
+              <div class="deal-sum">
+                <span data-i18n="book.total"></span>
+                <span class="deal-sum-v"><s id="cashOld" hidden></s><strong id="cashTotal"></strong></span>
+              </div>
+              <button type="button" class="deal-cta" id="dealAdd"></button>
+              <p class="deal-save" id="dealSave" hidden></p>
             </div>
             <label class="field">
               <span data-i18n="book.name"></span>
@@ -273,10 +285,6 @@
               <span><span data-i18n="book.email"></span> <em data-i18n="book.email.opt"></em></span>
               <input type="email" id="fEmail" autocomplete="email" maxlength="120" data-i18n-placeholder="book.email.ph">
             </label>
-            <div class="cash-total">
-              <span data-i18n="book.total"></span>
-              <strong id="cashTotal"></strong>
-            </div>
             <p class="form-error" id="formError" role="alert" hidden></p>
             <button class="btn btn-primary btn-lg btn-block" type="submit" id="confirmBtn" disabled>
               <span data-i18n="book.confirm"></span>
@@ -408,9 +416,9 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="assets/js/config.js?v=20261104b"></script>
-  <script src="assets/js/i18n.js?v=20261104b"></script>
-  <script src="assets/js/app.js?v=20261104b"></script>
-  <script src="assets/js/chat.js?v=20261104b"></script>
+  <script src="assets/js/config.js?v=20261104c"></script>
+  <script src="assets/js/i18n.js?v=20261104c"></script>
+  <script src="assets/js/app.js?v=20261104c"></script>
+  <script src="assets/js/chat.js?v=20261104c"></script>
 </body>
 </html>

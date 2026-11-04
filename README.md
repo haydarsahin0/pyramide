@@ -1,6 +1,6 @@
 # Pyramide Göttingen
 
-Tek ürünlü sticker sitesi: Almanca / İngilizce, **ödeme teslimde nakit**, SUB Café (2. kat) teslim randevusu ve sana özel admin paneli.
+Tek ürünlü sticker sitesi (ilk sticker 7 €, ikinciden itibaren 6 €): Almanca / İngilizce, **ödeme teslimde nakit**, SUB Café (2. kat) teslim randevusu ve sana özel admin paneli.
 Sadece HTML/CSS/JS kullanıyor; GitHub Pages'te build adımı gerekmeden çalışıyor.
 
 - **Site:** https://haydarsahin0.github.io/pyramide/
@@ -77,7 +77,7 @@ Repo → **Settings → Pages** → *Deploy from a branch* → bu branch ve `/ (
 index.html             müşteri sitesi (ürün, kurallar, sipariş no, takvim, onay)
 admin.html             admin paneli
 assets/css/style.css   tasarım
-assets/js/config.js    Supabase, fiyat, adet ve saat ayarları
+assets/js/config.js    Supabase, fiyat (priceEur = ilk, priceExtraEur = sonrakiler), adet ve saat ayarları
 assets/js/i18n.js      DE + EN metinler
 assets/js/app.js       site mantığı
 assets/js/admin.js     admin mantığı
