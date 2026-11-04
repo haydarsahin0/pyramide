@@ -79,6 +79,8 @@
       if (!res || !res.ok) { ss.del("pw"); state.pw = null; return showLogin("Şifre yanlış."); }
       state.rows = (res.rows || []).map((r) => ({ ...r, ts: Date.parse(r.slot), qty: r.qty || 1 }));
       notifyExpress(state.rows);
+      renderBc();
+      if (!loadBcHist.done) { loadBcHist.done = true; loadBcHist(); }
       showDash();
       render();
       $("#updated").textContent = "Son güncelleme: " + fmtTime(Date.now());
@@ -145,7 +147,7 @@
         items.map((r) => `
           <div class="row${r.picked_up ? " done" : ""}">
             <span class="r-time">${r.express ? `${fmtTime(r.ts)}<small class="r-made">bis ${fmtTime(r.ts + cfg.expressWindowMinutes * 60000)}</small><span class="exp-badge">⚡ EXPRESS</span>` : fmtTime(r.ts)}</span>
-            <span class="r-name">${esc(r.name)}${r.online ? '<span class="online-dot" title="Şu an sitede"></span>' : ""}${r.email ? `<span class="r-email"><a href="mailto:${esc(r.email)}">${esc(r.email)}</a></span>` : ""}${r.created_at ? `<span class="r-made">Rezerve: ${esc(fmtStamp(r.created_at))}${r.has_chat ? " · sohbet var" : ""}</span>` : ""}</span>
+            <span class="r-name">${esc(r.name)}${r.online ? '<span class="online-dot" title="Şu an sitede"></span>' : ""}${r.email ? `<span class="r-email"><a href="mailto:${esc(r.email)}">${esc(r.email)}</a></span>` : ""}<span class="r-msg" data-msg="${esc(r.order_no)}">✉ Mesaj gönder</span>${r.created_at ? `<span class="r-made">Rezerve: ${esc(fmtStamp(r.created_at))}${r.has_chat ? " · sohbet var" : ""}</span>` : ""}</span>
             <span class="r-meta">
               <span class="r-qty"><span class="r-lbl">Adet</span>${r.qty} ×</span>
               <span class="r-cash"><span class="r-lbl">Nakit</span>${money(cfg.total(r.qty, r.express))}</span>
@@ -274,6 +276,11 @@
       const changed = JSON.stringify(res.rows) !== JSON.stringify(chat.msgs) || JSON.stringify(ctx) !== JSON.stringify(chat.ctx);
       chat.msgs = res.rows || [];
       chat.ctx = ctx;
+      try {
+        const orders = [...new Set(ctx.bookings.map((b) => b.order_no).concat(th && th.order_no ? [th.order_no] : []))];
+        const nr = orders.length ? await rpc("pyramide_admin_order_notices", { p_password: state.pw, p_orders: orders }) : null;
+        chat.notices = (nr && nr.ok && nr.rows) || [];
+      } catch { chat.notices = []; }
       if (changed || !silent) renderConvo(false);
     } catch { toast("Mesajlar yüklenemedi"); }
   }
@@ -297,7 +304,9 @@
       </div>
       ${loading ? "" : renderCtx()}
       <div class="convo-body" id="convoBody">${loading ? '<div class="convo-empty">Yükleniyor…</div>' :
-        chat.msgs.map((m) => `<div class="bubble ${m.sender === "admin" ? "from-admin" : "from-me"}"><p>${esc(m.body).replace(/\n/g, "<br>")}</p><span class="bubble-meta">${esc(fmtWhen(m.created_at))}</span></div>`).join("")}</div>
+        chat.msgs.map((m) => ({ ...m })).concat((chat.notices || []).map((n) => ({ sender: "admin", notice: true, body: n.body, created_at: n.created_at, seen_at: n.seen_at })))
+          .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))
+          .map((m) => `<div class="bubble ${m.sender === "admin" ? "from-admin" : "from-me"}${m.notice ? " is-notice" : ""}"><p>${m.notice ? "📣 " : ""}${esc(m.body).replace(/\n/g, "<br>")}</p><span class="bubble-meta">${m.notice ? (m.seen_at ? "duyuru · okundu · " : "duyuru · ") : ""}${esc(fmtWhen(m.created_at))}</span></div>`).join("")}</div>
       <form class="convo-form" id="replyForm">
         <textarea id="replyInput" rows="1" maxlength="2000" placeholder="Cevabını yaz… (Enter = gönder, Shift+Enter = yeni satır)"></textarea>
         <button class="btn btn-primary" type="submit">Gönder</button>
@@ -505,6 +514,76 @@
     hbars($("#oLangs"), s.langs || [], LANG_TR);
     hbars($("#oRefs"), s.referrers || [], {});
   }
+
+  /* ── broadcast to waiting customers ─────── */
+  const bc = { aud: "today", single: null };
+  const waiting = (aud) => state.rows.filter((r) => !r.picked_up
+    && (r.express ? r.ts + cfg.expressWindowMinutes * 60000 : r.ts + cfg.slotMinutes * 60000) > Date.now()
+    && (aud === "today" ? dayKey(r.ts) === dayKey(Date.now()) : aud === "express" ? r.express : true));
+  function renderBc() {
+    if (!$("#bcAudience")) return;
+    $("#bcCountToday").textContent = waiting("today").length;
+    $("#bcCountAll").textContent = waiting("upcoming").length;
+    $("#bcCountXp").textContent = waiting("express").length;
+    const sb = $("#bcSingleBtn");
+    sb.hidden = !bc.single;
+    if (bc.single) sb.textContent = "Tek kişi: " + bc.single.name;
+    $$("#bcAudience button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.aud === bc.aud)));
+    const list = bc.aud === "single" && bc.single ? [bc.single] : waiting(bc.aud);
+    $("#bcTo").textContent = list.length
+      ? `Alıcılar (${list.length}): ` + list.slice(0, 12).map((r) => `${r.name} (${fmtTime(r.ts)})`).join(", ") + (list.length > 12 ? " …" : "")
+      : "Bu grupta bekleyen müşteri yok.";
+    $("#bcSend").textContent = list.length ? `Gönder (${list.length} kişiye)` : "Gönder";
+    $("#bcSend").disabled = !list.length;
+  }
+  async function loadBcHist() {
+    try {
+      const res = await rpc("pyramide_admin_broadcasts", { p_password: state.pw });
+      if (!res || !res.ok) return;
+      const AUD = { today: "Bugün bekleyenler", upcoming: "Tüm bekleyenler", express: "Express" };
+      $("#bcHist").innerHTML = (res.rows || []).slice(0, 8).map((b) => `
+        <div class="bc-item"><p>${esc(b.body)}</p><span class="bc-stat">${b.seen}/${b.recipients} okudu</span>
+        <small>${esc(fmtStamp(b.created_at))} · ${esc(AUD[b.audience] || "Tek kişi")} · ${esc((b.names || []).slice(0, 6).join(", "))}${(b.names || []).length > 6 ? " …" : ""}</small></div>`).join("");
+    } catch { /* ignore */ }
+  }
+  $("#bcAudience").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-aud]"); if (!b) return;
+    bc.aud = b.dataset.aud; renderBc();
+  });
+  $$("[data-tpl]").forEach((b) => b.addEventListener("click", () => {
+    let txt = b.dataset.tpl;
+    if (b.dataset.ask) {
+      const v = (prompt(b.dataset.ask) || "").trim();
+      if (!v) return;
+      txt = txt.split("{x}").join(v);
+    }
+    const ta = $("#bcText"); ta.value = txt; ta.focus();
+  }));
+  $("#list").addEventListener("click", (e) => {
+    const m = e.target.closest("[data-msg]"); if (!m) return;
+    const r = state.rows.find((x) => x.order_no === m.dataset.msg); if (!r) return;
+    bc.single = r; bc.aud = "single"; renderBc();
+    document.querySelector(".bc-card").scrollIntoView({ behavior: "smooth", block: "start" });
+    setTimeout(() => $("#bcText").focus(), 350);
+  });
+  $("#bcSend").addEventListener("click", async () => {
+    const text = $("#bcText").value.trim();
+    if (!text) { $("#bcText").focus(); return toast("Önce mesajı yaz"); }
+    const single = bc.aud === "single" && bc.single;
+    const n = single ? 1 : waiting(bc.aud).length;
+    if (!confirm(`Bu mesaj ${n} kişiye gidecek:\n\n${text}`)) return;
+    const btn = $("#bcSend"); btn.disabled = true;
+    try {
+      const res = single
+        ? await rpc("pyramide_admin_notify", { p_password: state.pw, p_order: bc.single.order_no, p_body: text })
+        : await rpc("pyramide_admin_broadcast", { p_password: state.pw, p_body: text, p_audience: bc.aud });
+      if (!res || !res.ok) throw new Error(res && res.error);
+      toast(`Gönderildi – ${res.recipients} kişi`);
+      $("#bcText").value = ""; bc.single = null; if (bc.aud === "single") bc.aud = "today";
+      renderBc(); loadBcHist();
+    } catch (ex) { toast(ex.message === "no_recipients" ? "Bekleyen müşteri yok" : "Gönderilemedi"); }
+    finally { btn.disabled = false; renderBc(); }
+  });
 
   /* ── new Express booking alert ────────────── */
   const seenXp = new Set(); let xpPrimed = false;

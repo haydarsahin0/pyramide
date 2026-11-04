@@ -30,6 +30,42 @@
   let msgs = store.get("chat_msgs", []);           // cached thread
   let lastId = msgs.reduce((m, x) => Math.max(m, x.id || 0), 0);
   let open = false, timer = null, sending = false;
+  let notices = store.get("notices", []);          // messages from the admin to my reservations
+  let noticeLast = notices.reduce((m, x) => Math.max(m, x.id || 0), 0);
+
+  // all order numbers this browser knows about
+  function myOrders() {
+    const out = new Set();
+    const cur = (store.get("current") || {}).no; if (cur) out.add(cur);
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i) || "";
+        const m = k.match(/^pyr_booking:(PYR-[A-HJ-NP-Z2-9]{6})$/); if (m) out.add(m[1]);
+      }
+    } catch { /* ignore */ }
+    return [...out].slice(0, 10);
+  }
+  const shareNotices = () => window.dispatchEvent(new CustomEvent("pyr:notices", { detail: notices.slice() }));
+  async function fetchNotices() {
+    const orders = myOrders(); if (!orders.length) return false;
+    try {
+      const rows = await rpc("pyramide_notices_fetch", { p_orders: orders, p_after: noticeLast });
+      if (!Array.isArray(rows) || !rows.length) return false;
+      for (const r of rows) if (!notices.some((n) => n.id === r.id)) notices.push(r);
+      noticeLast = Math.max(noticeLast, ...rows.map((r) => r.id));
+      store.set("notices", notices.slice(-50));
+      if (open) markNoticesSeen();
+      shareNotices();
+      return true;
+    } catch { return false; }
+  }
+  function markNoticesSeen() {
+    if (!noticeLast || store.get("notice_seen", 0) >= noticeLast) return;
+    store.set("notice_seen", noticeLast);
+    rpc("pyramide_notices_seen", { p_orders: myOrders(), p_upto: noticeLast }).catch(() => {});
+    updateBadge();
+  }
+  window.addEventListener("pyr:notices-seen", markNoticesSeen);
 
   const ALPHA = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   function newToken() {
@@ -54,8 +90,11 @@
 
   function render() {
     let html = `<div class="bubble from-admin"><p>${esc(t("chat.hello"))}</p></div>`;
-    for (const m of msgs) {
-      html += `<div class="bubble ${m.sender === "admin" ? "from-admin" : "from-me"}${m.pending ? " pending" : ""}${m.failed ? " failed" : ""}">
+    const all = msgs.map((m) => ({ ...m })).concat(notices.map((n) => ({ sender: "admin", notice: true, body: n.body, created_at: n.created_at })));
+    all.sort((a, b) => (a.pending || a.failed ? 1e15 : Date.parse(a.created_at)) - (b.pending || b.failed ? 1e15 : Date.parse(b.created_at)));
+    for (const m of all) {
+      html += `<div class="bubble ${m.sender === "admin" ? "from-admin" : "from-me"}${m.notice ? " is-notice" : ""}${m.pending ? " pending" : ""}${m.failed ? " failed" : ""}">
+        ${m.notice ? `<span class="bubble-tag">📣 ${esc(t("notice.tag"))}</span>` : ""}
         <p>${esc(m.body).replace(/\n/g, "<br>")}</p>
         <span class="bubble-meta">${m.failed ? esc(t("chat.failed")) : m.pending ? "…" : esc(fmtTime(m.created_at))}</span>
       </div>`;
@@ -68,8 +107,10 @@
 
   const baseTitle = () => document.title.replace(/^\(\d+\)\s*/, "");
   function updateBadge() {
-    const seen = store.get("chat_seen", 0);
-    const fresh = msgs.filter((m) => m.sender === "admin" && m.id > seen);
+    const seen = store.get("chat_seen", 0), nSeen = store.get("notice_seen", 0);
+    const fresh = msgs.filter((m) => m.sender === "admin" && m.id > seen).map((m) => ({ ...m, key: "m" + m.id }))
+      .concat(notices.filter((n) => n.id > nSeen).map((n) => ({ ...n, key: "n" + n.id })))
+      .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
     const unread = open ? 0 : fresh.length;
     badge.hidden = !unread;
     badge.textContent = unread;
@@ -81,8 +122,8 @@
     // speech bubble with the latest reply, until opened or dismissed
     const peek = $("#chatPeek");
     const last = fresh[fresh.length - 1];
-    const dismissed = store.get("chat_peek_dismissed", 0);
-    if (unread && last && last.id > dismissed) {
+    const dismissed = store.get("peek_dismissed_key", "");
+    if (unread && last && last.key !== dismissed) {
       $("#chatPeekBody").textContent = last.body.length > 110 ? last.body.slice(0, 110) + "…" : last.body;
       peek.hidden = false;
     } else {
@@ -91,6 +132,8 @@
   }
 
   async function poll() {
+    const gotNotices = await fetchNotices();
+    if (gotNotices) render();
     if (!token) return;
     try {
       const rows = await rpc("pyramide_chat_fetch", { p_token: token, p_after: lastId });
@@ -108,7 +151,6 @@
 
   function schedule() {
     clearInterval(timer);
-    if (!token) return;
     timer = setInterval(() => { if (!document.hidden) poll(); }, open ? 6000 : 20000);
   }
 
@@ -122,6 +164,7 @@
       if (!$("#chatName").value && prof.name) $("#chatName").value = prof.name;
       if (!$("#chatEmail").value && prof.email) $("#chatEmail").value = prof.email;
       store.set("chat_seen", lastId);
+      markNoticesSeen();
       render();
       poll();
       setTimeout(() => input.focus(), 60);
@@ -133,11 +176,13 @@
   fab.addEventListener("click", () => setOpen(!open));
   $("#chatPeekOpen").addEventListener("click", () => setOpen(true));
   $("#chatPeekClose").addEventListener("click", () => {
-    const lastAdmin = msgs.filter((m) => m.sender === "admin").pop();
-    if (lastAdmin) store.set("chat_peek_dismissed", lastAdmin.id);
+    const lastAdmin = msgs.filter((m) => m.sender === "admin").map((m) => ({ ...m, key: "m" + m.id }))
+      .concat(notices.map((n) => ({ ...n, key: "n" + n.id })))
+      .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at)).pop();
+    if (lastAdmin) store.set("peek_dismissed_key", lastAdmin.key);
     $("#chatPeek").hidden = true;
   });
-  document.addEventListener("visibilitychange", () => { if (!document.hidden && token) poll(); });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
   $("#chatClose").addEventListener("click", () => setOpen(false));
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && open) setOpen(false); });
 
@@ -221,5 +266,7 @@
   new MutationObserver(() => { updateBadge(); if (open) render(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
 
   updateBadge();
-  if (token) { poll(); schedule(); }
+  shareNotices();
+  poll(); schedule();
+  window.addEventListener("pyr:booked", () => poll());
 })();

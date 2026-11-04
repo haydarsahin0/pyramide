@@ -48,6 +48,14 @@ Ziyaretçi sayımı rastgele bir tarayıcı kimliğiyle yapılır (IP yok, isim 
 
 Site saatleri 30 saniyede bir yeniden yükler; değişiklikler anında görünür.
 
+## Bekleyenlere mesaj (admin → Rezervasyonlar)
+
+- **📣 Bekleyenlere mesaj gönder** kartı: alıcılar *Bugün bekleyenler*, *Tüm bekleyenler*, *⚡ Express* ya da tek kişi (satırdaki "✉ Mesaj gönder").
+- Şablonlar: "📍 LSG oda numarası" ve "✅ Buradayım" oda numarasını bir kez sorar, Almanca + İngilizce metni doldurur; "⏰ Gecikiyorum".
+- Müşteri tarafında: ana sayfadaki rezervasyon kartının altında ve onay ekranında "📣 Nachricht von Pyramide" kutusu, sohbet butonunda kırmızı rozet + balon, sohbette 📣 işaretli mesaj.
+- Gönderilenler listesi kaç kişiye gittiğini ve kaçının okuduğunu gösterir. Sohbet ekranında o müşteriye giden duyurular da görünür.
+- Mesaj, müşterinin tarayıcısında kayıtlı Bestellnummer'e gider; müşteri siteyi açtığında (açıksa 20 sn içinde) görür.
+
 ## Mesajlar (sohbet)
 
 - Sitede sağ altta **Nachricht** butonu: ziyaretçi giriş yapmadan yazar; cevabın aynı pencerede görünür.
@@ -103,6 +111,7 @@ supabase/analytics.sql ziyaretçi istatistikleri + admin verileri (chat.sql'den 
 supabase/express.sql   Express saatleri + ayarlar (analytics.sql'den sonra)
 supabase/hours.sql     Standard haftalık saatler + günlük istisnalar (express.sql'den sonra)
 supabase/express_now.sql Express = 1 saat içinde; rezervasyon kontrolü (hours.sql'den sonra)
+supabase/notices.sql   bekleyenlere toplu / tekil mesaj (express_now.sql'den sonra)
 ```
 
 Saatleri veya en fazla adedi değiştirirsen aynı değerleri `supabase/schema.sql` → `pyramide_book` içindeki kontrollerde de güncelle.

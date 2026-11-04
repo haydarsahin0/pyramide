@@ -1109,3 +1109,21 @@ body.chat-open .chat-peek { display: none; }
 .xp-fill { display: block; height: 100%; width: 100%; border-radius: 4px; background: linear-gradient(90deg, #EBBE70, #C98E40); transform-origin: left; animation: xpFill 1.4s var(--ease) both; }
 @keyframes xpFill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 .xp-steps { font-size: 13.5px; color: var(--ink-3); }
+
+/* messages from the admin (e.g. LSG room number) */
+.notice-card {
+  display: flex; gap: 12px; align-items: flex-start; text-align: left;
+  width: min(460px, 100%); margin: 12px auto 0; padding: 14px 16px; border-radius: 20px;
+  background: linear-gradient(140deg, rgba(248, 222, 166, .92), rgba(252, 241, 216, .82));
+  border: 1px solid rgba(255, 255, 255, .9);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 14px 30px -18px rgba(140, 94, 42, .55);
+  animation: tilePop .5s var(--ease-spring);
+}
+#doneNotice { margin: 22px auto 0; max-width: 560px; width: 100%; }
+.notice-card-ic { font-size: 22px; line-height: 1; margin-top: 1px; }
+.notice-card-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.notice-card-text strong { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #7A4E1E; }
+.notice-card-body { font-size: 16px; font-weight: 600; line-height: 1.4; color: var(--ink); overflow-wrap: anywhere; white-space: pre-line; }
+.notice-card-time { font-size: 12px; color: var(--ink-3); }
+.bubble.is-notice { background: linear-gradient(140deg, rgba(248, 222, 166, .95), rgba(252, 241, 216, .9)); border-color: rgba(255,255,255,.9); }
+.bubble-tag { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em; color: #7A4E1E; margin-bottom: 3px; }

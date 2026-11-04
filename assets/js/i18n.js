@@ -199,6 +199,8 @@ window.PYRAMIDE_I18N = {
     "xp.done.time": "Jetzt – bis {time} Uhr",
     "xp.bring": "Bis spätestens {time} Uhr da sein",
     "book.err.express": "Express ist gerade nicht mehr verfügbar. Bitte wähle eine feste Abholzeit.",
+    "notice.title": "Nachricht von Pyramide",
+    "notice.tag": "Info",
     "img.alt": "Der Pyramide-Sticker: eine kleine, lächelnde Pyramide mit rosigen Wangen",
     "price.label": "inkl. Abholung"
   },
@@ -403,6 +405,8 @@ window.PYRAMIDE_I18N = {
     "xp.done.time": "Now – by {time}",
     "xp.bring": "Be there by {time} at the latest",
     "book.err.express": "Express just became unavailable. Please pick a regular time.",
+    "notice.title": "Message from Pyramide",
+    "notice.tag": "Info",
     "img.alt": "The Pyramide sticker: a small, smiling pyramid with rosy cheeks",
     "price.label": "incl. pickup"
   }

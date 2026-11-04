@@ -145,6 +145,7 @@
     if (changed && !(view === "shop" && /^#[a-z]/.test(location.hash))) window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
     if (changed) ping();
     if (view === "shop") renderReturn();
+    renderNotices();
     if (view === "order") renderOrder();
     if (view === "book") enterBooking();
     if (view === "done") renderDone();
@@ -160,6 +161,24 @@
       $("#returnOrder").textContent = state.order.no;
     }
   }
+
+  // latest message from the admin for the current reservation
+  let latestNotices = [];
+  function renderNotices() {
+    const no = state.order && state.order.no;
+    const n = latestNotices.filter((x) => x.order_no === no).pop();
+    for (const id of ["returnNotice", "doneNotice"]) {
+      const el = $("#" + id); if (!el) continue;
+      const visible = !!n && (id === "doneNotice" || !$("#returnCard").hidden);
+      el.hidden = !visible;
+      if (n) {
+        el.querySelector(".notice-card-body").textContent = n.body;
+        el.querySelector(".notice-card-time").textContent = new Intl.DateTimeFormat(locale(), { timeZone: cfg.timezone, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(Date.parse(n.created_at));
+      }
+    }
+    if (n && currentView === "done") window.dispatchEvent(new Event("pyr:notices-seen"));
+  }
+  window.addEventListener("pyr:notices", (e) => { latestNotices = e.detail || []; renderNotices(); });
 
   window.addEventListener("hashchange", () => render(routeFromHash()));
   window.addEventListener("popstate", () => render(routeFromHash()));
@@ -617,6 +636,7 @@
       }
       store.set("booking:" + state.order.no, { slot: state.express ? (Date.parse(res.slot) || Date.now()) : state.slot, name, email, qty: state.qty, express: state.express });
       store.set("profile", { name, email: email || (store.get("profile") || {}).email || "" });
+      window.dispatchEvent(new Event("pyr:booked"));
       go("done");
     } catch {
       showErr("book.err.network");

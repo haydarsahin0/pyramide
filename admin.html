@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=20261104e">
+  <link rel="stylesheet" href="assets/css/style.css?v=20261104f">
   <style>
     .a-wrap { max-width: 1080px; margin: 0 auto; padding: 32px var(--gutter) 80px; }
     .a-login { min-height: calc(100vh - var(--nav-h)); display: grid; place-items: center; padding: 24px var(--gutter); }
@@ -249,6 +249,24 @@
     .xp-alert { position: fixed; z-index: 120; left: 50%; top: 18px; transform: translateX(-50%); display: flex; gap: 14px; align-items: center; padding: 14px 18px; border-radius: 20px; background: rgba(29,27,23,.94); color: #FBF7EF; box-shadow: 0 24px 50px -16px rgba(0,0,0,.55); animation: sheetIn .45s var(--ease-spring); max-width: calc(100vw - 24px); }
     .xp-alert b { color: var(--gold); }
     .xp-alert button { height: 34px; padding: 0 14px; border-radius: 999px; background: var(--gold); color: var(--ink); font-weight: 700; font-size: 13px; flex: none; }
+
+    .bc-tpl { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .bc-tpl .tag { cursor: pointer; height: 28px; font-size: 12.5px; }
+    .bc-tpl .tag:hover { background: #fff; }
+    #bcText { width: 100%; min-height: 84px; padding: 12px 14px; border-radius: 16px; border: 1px solid rgba(255,255,255,.8); background: rgba(255,253,248,.75); font: inherit; font-size: 15px; resize: vertical; outline: none; }
+    #bcText:focus { border-color: var(--ink); background: #fff; }
+    .bc-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+    .bc-row .seg button { height: 34px; padding: 0 14px; font-size: 13.5px; }
+    .bc-to { font-size: 12.5px; color: var(--ink-3); margin-top: 8px; min-height: 17px; }
+    .bc-hist { margin-top: 10px; }
+    .bc-item { padding: 10px 0; border-top: 1px solid rgba(29,27,23,.07); display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; }
+    .bc-item p { font-size: 14px; white-space: pre-line; overflow-wrap: anywhere; }
+    .bc-item small { font-size: 12px; color: var(--ink-3); }
+    .bc-item .bc-stat { text-align: right; font-size: 12.5px; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
+    .r-msg { display: inline-block; margin-top: 4px; font-size: 12px; font-weight: 600; color: var(--bronze); cursor: pointer; }
+    .r-msg:hover { text-decoration: underline; }
+    .convo-body .bubble.is-notice { background: linear-gradient(140deg, #F3D79E, #EFD9A8); color: var(--ink); }
+    .convo-body .bubble.is-notice .bubble-meta { color: var(--ink-2); }
   </style>
 </head>
 <body>
@@ -335,6 +353,26 @@
     </div>
 
     <div id="resView" hidden>
+    <section class="o-card bc-card">
+      <div class="o-head"><h2>📣 Bekleyenlere mesaj gönder</h2><span class="o-note">Müşterinin sitesinde sohbet balonu, rezervasyon kartı ve onay ekranında görünür</span></div>
+      <div class="bc-tpl">
+        <button type="button" class="tag" data-tpl="Wir treffen uns im LSG, Raum {x}. / We meet at the LSG, room {x}." data-ask="LSG oda numarası? (ör. 1.110)">📍 LSG oda numarası</button>
+        <button type="button" class="tag" data-tpl="Ich bin jetzt da – LSG, Raum {x}. / I'm here now – LSG, room {x}." data-ask="Hangi odadasın? (ör. 1.110)">✅ Buradayım</button>
+        <button type="button" class="tag" data-tpl="Ich verspäte mich ca. 10 Minuten, sorry! / I'm about 10 minutes late, sorry!">⏰ Gecikiyorum</button>
+      </div>
+      <textarea id="bcText" rows="3" maxlength="1000" placeholder="Örn: Wir treffen uns im LSG, Raum 1.110 / We meet at the LSG, room 1.110"></textarea>
+      <div class="bc-row">
+        <div class="seg" id="bcAudience">
+          <button type="button" data-aud="today" aria-pressed="true">Bugün bekleyenler<span class="count" id="bcCountToday"></span></button>
+          <button type="button" data-aud="upcoming" aria-pressed="false">Tüm bekleyenler<span class="count" id="bcCountAll"></span></button>
+          <button type="button" data-aud="express" aria-pressed="false">⚡ Express<span class="count" id="bcCountXp"></span></button>
+          <button type="button" data-aud="single" aria-pressed="false" id="bcSingleBtn" hidden></button>
+        </div>
+        <button type="button" class="btn btn-primary" id="bcSend">Gönder</button>
+      </div>
+      <p class="bc-to" id="bcTo"></p>
+      <div class="bc-hist" id="bcHist"></div>
+    </section>
     <div class="stats">
       <div class="stat dark"><div class="stat-k">Bugün</div><div class="stat-v" id="sToday">0</div><div class="stat-s" id="sTodaySub"></div></div>
       <div class="stat"><div class="stat-k">Yaklaşan rezervasyon</div><div class="stat-v" id="sUpcoming">0</div><div class="stat-s" id="sUpcomingSub"></div></div>
@@ -397,7 +435,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="assets/js/config.js?v=20261104e"></script>
-  <script src="assets/js/admin.js?v=20261104e"></script>
+  <script src="assets/js/config.js?v=20261104f"></script>
+  <script src="assets/js/admin.js?v=20261104f"></script>
 </body>
 </html>

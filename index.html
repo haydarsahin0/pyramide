@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=20261104e">
+  <link rel="stylesheet" href="assets/css/style.css?v=20261104f">
 </head>
 <body>
   <div class="bg" aria-hidden="true">
@@ -68,6 +68,10 @@
           <span class="return-order" id="returnOrder"></span>
           <span class="return-arrow" aria-hidden="true">›</span>
         </a>
+        <div class="notice-card" id="returnNotice" hidden>
+          <span class="notice-card-ic" aria-hidden="true">📣</span>
+          <span class="notice-card-text"><strong data-i18n="notice.title"></strong><span class="notice-card-body"></span><small class="notice-card-time"></small></span>
+        </div>
       </section>
 
       <section class="section rules-section" id="rules">
@@ -328,6 +332,10 @@
         <p class="eyebrow" data-i18n="done.eyebrow"></p>
         <h1 class="flow-title" id="doneTitle"></h1>
         <p class="flow-sub" data-i18n="done.sub"></p>
+        <div class="notice-card" id="doneNotice" hidden>
+          <span class="notice-card-ic" aria-hidden="true">📣</span>
+          <span class="notice-card-text"><strong data-i18n="notice.title"></strong><span class="notice-card-body"></span><small class="notice-card-time"></small></span>
+        </div>
 
         <dl class="ticket">
           <div><dt data-i18n="done.date"></dt><dd id="doneDate"></dd></div>
@@ -442,9 +450,9 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="assets/js/config.js?v=20261104e"></script>
-  <script src="assets/js/i18n.js?v=20261104e"></script>
-  <script src="assets/js/app.js?v=20261104e"></script>
-  <script src="assets/js/chat.js?v=20261104e"></script>
+  <script src="assets/js/config.js?v=20261104f"></script>
+  <script src="assets/js/i18n.js?v=20261104f"></script>
+  <script src="assets/js/app.js?v=20261104f"></script>
+  <script src="assets/js/chat.js?v=20261104f"></script>
 </body>
 </html>
