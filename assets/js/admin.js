@@ -81,6 +81,7 @@
       render();
       $("#updated").textContent = "Son güncelleme: " + fmtTime(Date.now());
       loadThreads();
+      if (!chat.started) { chat.started = true; setTab(LIVE_DB ? "ovr" : "res"); }
       if (!silent) toast("Güncellendi");
     } catch {
       if (!state.rows.length) showLogin("Bağlantı kurulamadı. Tekrar dene.");
@@ -142,7 +143,7 @@
         items.map((r) => `
           <div class="row${r.picked_up ? " done" : ""}">
             <span class="r-time">${fmtTime(r.ts)}</span>
-            <span class="r-name">${esc(r.name)}${r.email ? `<span class="r-email"><a href="mailto:${esc(r.email)}">${esc(r.email)}</a></span>` : ""}</span>
+            <span class="r-name">${esc(r.name)}${r.online ? '<span class="online-dot" title="Şu an sitede"></span>' : ""}${r.email ? `<span class="r-email"><a href="mailto:${esc(r.email)}">${esc(r.email)}</a></span>` : ""}${r.created_at ? `<span class="r-made">Rezerve: ${esc(fmtStamp(r.created_at))}${r.has_chat ? " · sohbet var" : ""}</span>` : ""}</span>
             <span class="r-meta">
               <span class="r-qty"><span class="r-lbl">Adet</span>${r.qty} ×</span>
               <span class="r-cash"><span class="r-lbl">Nakit</span>${money(r.qty * cfg.priceEur)}</span>
@@ -170,7 +171,7 @@
     if (!$("#dash").hidden) { ss.set("pw", pw); $("#pw").value = ""; }
   });
   $("#logout").addEventListener("click", () => { ss.del("pw"); state.pw = null; state.rows = []; showLogin(); });
-  $("#refreshBtn").addEventListener("click", () => load(false));
+  $("#refreshBtn").addEventListener("click", () => { load(false); if (chat.tab === "ovr") loadStats(); });
   $("#filters").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-f]"); if (!b) return;
     state.filter = b.dataset.f; render();
@@ -252,6 +253,7 @@
       return `<button type="button" class="thread${th.unread > 0 ? " unread" : ""}" data-thread="${esc(th.id)}" aria-current="${th.id === chat.active}">
         <span class="thread-top"><span class="thread-name">${esc(who)}</span><span class="thread-time">${esc(fmtWhen(th.last_message_at))}</span></span>
         <span class="thread-prev">${last}</span>
+        <span class="thread-tags">${th.online ? '<span class="tag green">● çevrimiçi</span>' : ""}${th.booking ? `<span class="tag gold">${th.booking.qty}× · ${esc(fmtDayShort(th.booking.slot))}${th.booking.picked_up ? " · teslim" : ""}</span>` : '<span class="tag">rezervasyon yok</span>'}</span>
       </button>`;
     }).join("");
   }
@@ -266,8 +268,10 @@
     try {
       const res = await rpc("pyramide_admin_thread", { p_password: state.pw, p_thread: id });
       if (!res || !res.ok || chat.active !== id) return;
-      const changed = JSON.stringify(res.rows) !== JSON.stringify(chat.msgs);
+      const ctx = { bookings: res.bookings || [], visitor: res.visitor || null };
+      const changed = JSON.stringify(res.rows) !== JSON.stringify(chat.msgs) || JSON.stringify(ctx) !== JSON.stringify(chat.ctx);
       chat.msgs = res.rows || [];
+      chat.ctx = ctx;
       if (changed || !silent) renderConvo(false);
     } catch { toast("Mesajlar yüklenemedi"); }
   }
@@ -289,6 +293,7 @@
         <div class="convo-who"><strong>${esc(th.name || "Ziyaretçi")}</strong><div class="convo-meta">${meta}</div></div>
         <button type="button" class="del" id="convoDel" title="Konuşmayı sil" aria-label="Konuşmayı sil"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
+      ${loading ? "" : renderCtx()}
       <div class="convo-body" id="convoBody">${loading ? '<div class="convo-empty">Yükleniyor…</div>' :
         chat.msgs.map((m) => `<div class="bubble ${m.sender === "admin" ? "from-admin" : "from-me"}"><p>${esc(m.body).replace(/\n/g, "<br>")}</p><span class="bubble-meta">${esc(fmtWhen(m.created_at))}</span></div>`).join("")}</div>
       <form class="convo-form" id="replyForm">
@@ -334,21 +339,171 @@
   function setTab(tab) {
     chat.tab = tab;
     $$("#tabs button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.tab === tab)));
+    $("#ovrView").hidden = tab !== "ovr";
     $("#resView").hidden = tab !== "res";
     $("#msgView").hidden = tab !== "msg";
     $("#csvBtn").hidden = tab !== "res";
-    $("#aTitle").textContent = tab === "res" ? "Rezervasyonlar" : "Mesajlar";
+    $("#aTitle").textContent = { ovr: "Genel bakış", res: "Rezervasyonlar", msg: "Mesajlar" }[tab];
     if (tab === "msg") loadThreads();
+    if (tab === "ovr") loadStats();
     clearInterval(chat.timer);
     chat.timer = setInterval(() => {
-      if (document.hidden || $("#dash").hidden || chat.tab !== "msg") return;
+      if (document.hidden || $("#dash").hidden) return;
+      if (chat.tab === "ovr") return loadStats();
+      if (chat.tab !== "msg") return;
       loadThreads();
       if (chat.active) openThread(chat.active, true);
-    }, 10000);
+    }, tab === "ovr" ? 15000 : 10000);
   }
   $("#tabs").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) setTab(b.dataset.tab); });
 
+  /* ── overview ────────────────────────────── */
+  const VIEW_TR = { shop: "Ana sayfada", order: "Bestellnummer ekranında", book: "Takvimde, saat seçiyor", done: "Onay ekranında" };
+  const DEV_TR = { mobile: "Telefon", tablet: "Tablet", desktop: "Bilgisayar", unknown: "Bilinmiyor" };
+  const LANG_TR = { de: "Almanca", en: "İngilizce", unknown: "Bilinmiyor" };
+  const DEV_ICON = {
+    mobile: '<svg viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M11 18h2"/></svg>',
+    tablet: '<svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M11 18h2"/></svg>',
+    desktop: '<svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M9 20h6M12 16.5V20"/></svg>'
+  };
+  function fmtStamp(iso) {
+    const d = new Date(iso);
+    return new Intl.DateTimeFormat("tr-TR", { timeZone: TZ, day: "numeric", month: "short" }).format(d) + " " + fmtTime(d);
+  }
+  function fmtDayShort(iso) {
+    const d = new Date(iso);
+    return new Intl.DateTimeFormat("tr-TR", { timeZone: TZ, weekday: "short", day: "numeric", month: "short" }).format(d) + " " + fmtTime(d);
+  }
+  function ago(iso) {
+    const m = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60000));
+    if (m < 1) return "az önce";
+    if (m < 60) return m + " dk";
+    const h = Math.floor(m / 60);
+    if (h < 24) return h + " sa " + (m % 60) + " dk";
+    return Math.floor(h / 24) + " gün";
+  }
+
+  function renderCtx() {
+    const c = chat.ctx || { bookings: [], visitor: null };
+    const b = c.bookings || [];
+    const v = c.visitor;
+    const bookingsHtml = b.length ? b.map((x) => `
+      <div class="ctx-booking">
+        <div class="ctx-line"><span>Bestellnummer</span><span class="mono">${esc(x.order_no)}</span></div>
+        <div class="ctx-line"><span>Adet · nakit</span><span>${x.qty} × = ${money(x.qty * cfg.priceEur)}</span></div>
+        <div class="ctx-line"><span>Teslim randevusu</span><span>${esc(fmtDayShort(x.slot))}</span></div>
+        <div class="ctx-line"><span>Rezervasyon yaptı</span><span>${esc(fmtStamp(x.created_at))}</span></div>
+        <div class="ctx-line"><span>Durum</span><span>${x.picked_up ? "✓ teslim edildi" : Date.parse(x.slot) < Date.now() ? "randevu geçti" : "bekliyor"}</span></div>
+      </div>`).join("") : '<p class="ctx-none">Bu kişinin rezervasyonu yok.</p>';
+    const visitorHtml = v ? `
+      <div class="ctx-line"><span>Durum</span><span>${v.online ? '<span class="tag green">● şu an sitede</span>' : "son görülme " + esc(ago(v.last_seen)) + " önce"}</span></div>
+      ${v.online ? `<div class="ctx-line"><span>Şu an</span><span>${esc(VIEW_TR[v.view] || v.view || "–")}</span></div>` : ""}
+      <div class="ctx-line"><span>İlk ziyaret</span><span>${esc(fmtStamp(v.first_seen))}</span></div>
+      <div class="ctx-line"><span>Geldiği gün sayısı</span><span>${v.days}</span></div>
+      <div class="ctx-line"><span>Cihaz · dil</span><span>${esc(DEV_TR[v.device] || "–")} · ${esc(LANG_TR[v.lang] || "–")}</span></div>
+      <div class="ctx-line"><span>Nereden geldi</span><span>${esc(v.referrer || "doğrudan")}</span></div>` : '<p class="ctx-none">Ziyaret bilgisi yok (eski sohbet).</p>';
+    return `<div class="convo-ctx">
+      <div class="ctx-box"><div class="ctx-k"><span>Sipariş</span><span>${b.length ? b.length + " rezervasyon" : ""}</span></div>${bookingsHtml}</div>
+      <div class="ctx-box"><div class="ctx-k"><span>Ziyaretçi</span></div>${visitorHtml}</div>
+    </div>`;
+  }
+
+  async function loadStats() {
+    if (!LIVE_DB) return;
+    try {
+      const s = await rpc("pyramide_admin_stats", { p_password: state.pw });
+      if (!s || !s.ok) return;
+      renderStats(s);
+    } catch { /* next tick */ }
+  }
+
+  function barChart(el, items, opts) {
+    const max = Math.max(1, ...items.map((i) => i.v));
+    el.innerHTML = `<div class="bars">${items.map((i, idx) => `
+        <div class="bar-col${i.today ? " today" : ""}" data-i="${idx}">
+          ${i.v && i.showTop ? `<span class="bar-top" style="bottom:calc(${(i.v / max) * 100}% + 3px)">${i.v}</span>` : ""}
+          <div class="bar${i.v ? "" : " zero"}" style="height:${(i.v / max) * 100}%"></div>
+        </div>`).join("")}</div>
+      <div class="x-labels">${items.map((i) => `<span>${esc(i.label)}</span>`).join("")}</div>
+      ${opts.sub ? `<div class="r-labels">${items.map((i) => `<span class="${i.sub ? "has" : ""}">${i.sub || "·"}</span>`).join("")}</div><div class="r-legend">${esc(opts.sub)}</div>` : ""}`;
+    const tip = document.createElement("div"); tip.className = "tip"; tip.hidden = true; el.appendChild(tip);
+    el.querySelectorAll(".bar-col").forEach((col) => {
+      col.addEventListener("mouseenter", () => {
+        const i = items[+col.dataset.i];
+        tip.innerHTML = opts.tip(i);
+        const r = col.getBoundingClientRect(), pr = el.getBoundingClientRect();
+        const barH = (i.v / max) * col.offsetHeight;
+        tip.style.left = Math.min(Math.max(r.left - pr.left + r.width / 2, 60), pr.width - 60) + "px";
+        tip.style.top = (col.offsetTop + col.offsetHeight - barH - (i.showTop && i.v ? 18 : 0)) + "px";
+        tip.hidden = false;
+      });
+      col.addEventListener("mouseleave", () => { tip.hidden = true; });
+    });
+  }
+
+  function hbars(el, rows, names) {
+    if (!rows.length) { el.innerHTML = '<p class="o-empty">Henüz veri yok.</p>'; return; }
+    const total = rows.reduce((a, r) => a + r.n, 0) || 1;
+    const max = Math.max(...rows.map((r) => r.n));
+    el.innerHTML = rows.map((r) => `
+      <div class="hbar" title="${esc((names[r.key] || r.key))}: ${r.n} (%${Math.round((r.n / total) * 100)})">
+        <span class="hbar-k">${esc(names[r.key] || (r.key === "direct" ? "Doğrudan" : r.key))}</span>
+        <span class="hbar-track"><span class="hbar-fill" style="display:block;width:${(r.n / max) * 100}%"></span></span>
+        <span class="hbar-v">${r.n}</span>
+      </div>`).join("");
+  }
+
+  function renderStats(s) {
+    $("#oNow").textContent = s.active_now;
+    $("#oToday").textContent = s.today;
+    $("#oTodaySub").textContent = `dün ${s.yesterday} · bugün ilk kez gelen ${s.new_today}`;
+    $("#oWeek").textContent = s.last7;
+    $("#oWeekSub").textContent = `son 30 gün ${s.last30} kişi`;
+    const conv = s.last7 ? Math.round((s.booked_visitors7 / s.last7) * 1000) / 10 : 0;
+    $("#oConv").textContent = s.last7 ? "%" + conv.toLocaleString("tr-TR") : "–";
+    $("#oConvSub").textContent = `7 günde ${s.bookings7} rezervasyon · bugün ${s.bookings_today} · bugün ${s.chats_today} sohbet`;
+
+    const live = s.active || [];
+    $("#oLiveNote").textContent = live.length ? `${live.length} kişi · 15 sn'de bir yenilenir` : "15 sn'de bir yenilenir";
+    $("#oLive").innerHTML = live.length ? live.map((v) => `
+      <div class="live-row">
+        <span class="live-ic">${DEV_ICON[v.device] || DEV_ICON.desktop}</span>
+        <div class="live-main">
+          <strong>${esc(VIEW_TR[v.view] || "Ana sayfada")}</strong>
+          <div class="live-sub">${esc(DEV_TR[v.device] || "Cihaz ?")} · ${esc(LANG_TR[v.lang] || "dil ?")} · ${esc(ago(v.session_started))} önce geldi · ${esc(v.referrer || "doğrudan")}</div>
+        </div>
+        <span class="tags">
+          ${v.booking ? `<span class="tag gold">Rezervasyonu var · ${v.booking.qty}× · ${esc(fmtDayShort(v.booking.slot))}</span>` : ""}
+          ${v.chat ? '<span class="tag">Sohbet</span>' : ""}
+          ${v.returning ? `<span class="tag">Tekrar gelen · ${v.days}. gün</span>` : '<span class="tag green">Yeni</span>'}
+        </span>
+      </div>`).join("") : '<p class="o-empty">Şu an sitede kimse yok.</p>';
+
+    const todayKey = dayKey(Date.now());
+    const daily = (s.daily || []).map((d) => {
+      const dt = new Date(d.day + "T12:00:00Z");
+      return {
+        v: d.visitors, sub: d.bookings, today: d.day === todayKey, showTop: true,
+        label: new Intl.DateTimeFormat("tr-TR", { day: "numeric", timeZone: "UTC" }).format(dt),
+        full: new Intl.DateTimeFormat("tr-TR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(dt)
+      };
+    });
+    barChart($("#oDaily"), daily, { sub: "alttaki satır: o gün yapılan rezervasyon", tip: (i) => `<b>${esc(i.full)}</b><br>${i.v} ziyaretçi · ${i.sub} rezervasyon` });
+
+    const nowH = +new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", hourCycle: "h23" }).format(new Date());
+    const hours = (s.hours_today || []).filter((h) => h.hour >= 8 && h.hour <= 23).map((h) => ({
+      v: h.visitors, today: h.hour === nowH, showTop: false, label: h.hour % 2 === 0 ? String(h.hour).padStart(2, "0") : "",
+      full: `${String(h.hour).padStart(2, "0")}:00 – ${String(h.hour + 1).padStart(2, "0")}:00`
+    }));
+    barChart($("#oHours"), hours, { tip: (i) => `<b>${esc(i.full)}</b><br>${i.v} ziyaretçi` });
+
+    hbars($("#oDevices"), s.devices || [], DEV_TR);
+    hbars($("#oLangs"), s.langs || [], LANG_TR);
+    hbars($("#oRefs"), s.referrers || [], {});
+  }
+
   /* ── boot ────────────────────────────────── */
+  try { localStorage.setItem("pyr_is_admin", "true"); } catch { /* ignore */ }
   $("#previewBanner").hidden = LIVE_DB;
   if (!LIVE_DB) $("#tabs").hidden = true;
   if (!LIVE_DB) load(true);

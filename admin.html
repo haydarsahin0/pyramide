@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=20261104a">
+  <link rel="stylesheet" href="assets/css/style.css?v=20261104b">
   <style>
     .a-wrap { max-width: 1080px; margin: 0 auto; padding: 32px var(--gutter) 80px; }
     .a-login { min-height: calc(100vh - var(--nav-h)); display: grid; place-items: center; padding: 24px var(--gutter); }
@@ -143,6 +143,76 @@
       .convo { height: 74vh; }
       .convo-back { display: grid; }
     }
+
+    .live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #5BC27A; margin-right: 8px; vertical-align: 1px; box-shadow: 0 0 0 0 rgba(91,194,122,.6); animation: livePulse 1.8s ease-out infinite; }
+    @keyframes livePulse { to { box-shadow: 0 0 0 8px rgba(91,194,122,0); } }
+    .o-card {
+      background: var(--glass); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); border-radius: var(--radius-lg);
+      padding: 20px 22px; margin-bottom: 14px; min-width: 0;
+    }
+    .o-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+    .o-head h2 { font-size: 17px; letter-spacing: -0.02em; }
+    .o-note { font-size: 12.5px; color: var(--ink-3); }
+    .o-grid2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; }
+    .o-grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .o-grid2 .o-card, .o-grid3 .o-card { margin-bottom: 0; }
+    .o-grid2 { margin-bottom: 14px; }
+    .o-empty { color: var(--ink-3); font-size: 15px; padding: 18px 0; text-align: center; }
+
+    .live-row { display: grid; grid-template-columns: 34px 1fr auto; gap: 12px; align-items: center; padding: 10px 0; }
+    .live-row + .live-row { border-top: 1px solid rgba(29,27,23,.07); }
+    .live-ic { width: 34px; height: 34px; border-radius: 10px; background: rgba(255,255,255,.7); display: grid; place-items: center; }
+    .live-ic svg { width: 18px; height: 18px; fill: none; stroke: var(--ink-2); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .live-main strong { font-size: 15px; }
+    .live-sub { font-size: 12.5px; color: var(--ink-3); margin-top: 1px; }
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+    .tag { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 600; background: rgba(255,255,255,.7); color: var(--ink-2); border: 1px solid rgba(255,255,255,.85); white-space: nowrap; }
+    .tag.gold { background: var(--gold-soft); color: #4E3716; border-color: transparent; }
+    .tag.green { background: rgba(63,122,82,.12); color: var(--ok); border-color: transparent; }
+
+    .chart { position: relative; }
+    .bars { display: flex; align-items: flex-end; gap: 2px; height: 150px; border-bottom: 1px solid rgba(29,27,23,.14); }
+    .bar-col { flex: 1; height: 100%; display: flex; align-items: flex-end; position: relative; cursor: default; }
+    .bar { width: 100%; max-width: 26px; margin: 0 auto; background: #C99A55; border-radius: 4px 4px 0 0; min-height: 0; transition: background .15s; }
+    .bar.zero { height: 2px !important; background: rgba(29,27,23,.12); border-radius: 1px; }
+    .bar-col.today .bar { background: #8C5E2A; }
+    .bar-col:hover .bar { background: #A87532; }
+    .bar-col.today:hover .bar { background: #6E4820; }
+    .bar-top { position: absolute; left: 0; right: 0; text-align: center; font-size: 11px; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+    .x-labels, .r-labels { display: flex; gap: 2px; margin-top: 6px; }
+    .x-labels span, .r-labels span { flex: 1; text-align: center; font-size: 10.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; }
+    .r-labels { margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(29,27,23,.12); }
+    .r-labels span.has { color: var(--ink); font-weight: 700; }
+    .r-legend { font-size: 11.5px; color: var(--ink-3); margin-top: 6px; }
+    .tip { position: absolute; z-index: 5; pointer-events: none; transform: translate(-50%, calc(-100% - 10px)); background: rgba(29,27,23,.92); color: #FBF7EF; padding: 8px 11px; border-radius: 10px; font-size: 12.5px; line-height: 1.4; white-space: nowrap; box-shadow: 0 10px 24px -10px rgba(0,0,0,.5); }
+    .tip b { font-weight: 700; }
+
+    .hbar { display: grid; grid-template-columns: 96px 1fr 40px; gap: 10px; align-items: center; padding: 6px 0; font-size: 14px; }
+    .hbar-k { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hbar-track { height: 10px; border-radius: 5px; background: rgba(29,27,23,.06); overflow: hidden; }
+    .hbar-fill { height: 100%; background: #C99A55; border-radius: 5px; }
+    .hbar-v { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    .convo-ctx { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 20px; border-bottom: 1px solid rgba(29,27,23,.07); background: rgba(255,255,255,.28); }
+    .ctx-box { background: rgba(255,255,255,.6); border: 1px solid rgba(255,255,255,.85); border-radius: 16px; padding: 12px 14px; min-width: 0; }
+    .ctx-k { font-size: 11.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; display: flex; justify-content: space-between; gap: 8px; }
+    .ctx-line { font-size: 13.5px; display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; }
+    .ctx-line span:first-child { color: var(--ink-3); }
+    .ctx-line span:last-child { font-weight: 600; text-align: right; }
+    .ctx-none { font-size: 13.5px; color: var(--ink-3); }
+    .ctx-booking + .ctx-booking { margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(29,27,23,.07); }
+    .thread-tags { display: flex; gap: 5px; margin-top: 6px; flex-wrap: wrap; }
+    .thread-tags .tag { height: 20px; font-size: 11px; padding: 0 7px; }
+    .online-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #5BC27A; margin-left: 6px; vertical-align: 1px; }
+    .r-made { display: block; font-weight: 400; font-size: 12px; color: var(--ink-3); }
+
+    @media (max-width: 900px) {
+      .o-grid2, .o-grid3 { grid-template-columns: 1fr; }
+      .convo-ctx { grid-template-columns: 1fr; }
+      .live-row { grid-template-columns: 34px 1fr; }
+      .live-row .tags { grid-column: 2; justify-content: flex-start; }
+    }
   </style>
 </head>
 <body>
@@ -181,7 +251,7 @@
     <div class="a-top">
       <div>
         <p class="eyebrow" lang="de">Pyramide Göttingen</p>
-        <h1 id="aTitle">Rezervasyonlar</h1>
+        <h1 id="aTitle">Genel bakış</h1>
         <p class="a-updated" id="updated"></p>
       </div>
       <div class="a-tools">
@@ -191,11 +261,43 @@
     </div>
 
     <div class="seg a-tabs" id="tabs">
-      <button type="button" data-tab="res" aria-pressed="true">Rezervasyonlar</button>
+      <button type="button" data-tab="ovr" aria-pressed="true">Genel bakış</button>
+      <button type="button" data-tab="res" aria-pressed="false">Rezervasyonlar</button>
       <button type="button" data-tab="msg" aria-pressed="false">Mesajlar<span class="tab-badge" id="msgBadge" hidden></span></button>
     </div>
 
-    <div id="resView">
+    <div id="ovrView">
+      <div class="stats">
+        <div class="stat dark"><div class="stat-k"><span class="live-dot"></span>Şu an sitede</div><div class="stat-v" id="oNow">–</div><div class="stat-s">son 90 saniyede aktif</div></div>
+        <div class="stat"><div class="stat-k">Bugün ziyaretçi</div><div class="stat-v" id="oToday">–</div><div class="stat-s" id="oTodaySub"></div></div>
+        <div class="stat"><div class="stat-k">Son 7 gün</div><div class="stat-v" id="oWeek">–</div><div class="stat-s" id="oWeekSub"></div></div>
+        <div class="stat"><div class="stat-k">Rezervasyona dönüşme (7 gün)</div><div class="stat-v" id="oConv">–</div><div class="stat-s" id="oConvSub"></div></div>
+      </div>
+
+      <section class="o-card">
+        <div class="o-head"><h2>Şu an sitede olanlar</h2><span class="o-note" id="oLiveNote"></span></div>
+        <div id="oLive"></div>
+      </section>
+
+      <div class="o-grid2">
+        <section class="o-card">
+          <div class="o-head"><h2>Son 14 gün</h2><span class="o-note">günlük ziyaretçi</span></div>
+          <div class="chart" id="oDaily"></div>
+        </section>
+        <section class="o-card">
+          <div class="o-head"><h2>Bugün saat saat</h2><span class="o-note">o saatte sitede olan ziyaretçi</span></div>
+          <div class="chart" id="oHours"></div>
+        </section>
+      </div>
+
+      <div class="o-grid3">
+        <section class="o-card"><div class="o-head"><h2>Cihaz</h2><span class="o-note">30 gün</span></div><div id="oDevices"></div></section>
+        <section class="o-card"><div class="o-head"><h2>Dil</h2><span class="o-note">30 gün</span></div><div id="oLangs"></div></section>
+        <section class="o-card"><div class="o-head"><h2>Nereden geldi</h2><span class="o-note">30 gün</span></div><div id="oRefs"></div></section>
+      </div>
+    </div>
+
+    <div id="resView" hidden>
     <div class="stats">
       <div class="stat dark"><div class="stat-k">Bugün</div><div class="stat-v" id="sToday">0</div><div class="stat-s" id="sTodaySub"></div></div>
       <div class="stat"><div class="stat-k">Yaklaşan rezervasyon</div><div class="stat-v" id="sUpcoming">0</div><div class="stat-s" id="sUpcomingSub"></div></div>
@@ -226,7 +328,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="assets/js/config.js?v=20261104a"></script>
-  <script src="assets/js/admin.js?v=20261104a"></script>
+  <script src="assets/js/config.js?v=20261104b"></script>
+  <script src="assets/js/admin.js?v=20261104b"></script>
 </body>
 </html>

@@ -133,6 +133,7 @@
       if (on && changed) { v.classList.remove("view-enter"); void v.offsetWidth; v.classList.add("view-enter"); }
     });
     if (changed && !(view === "shop" && /^#[a-z]/.test(location.hash))) window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
+    if (changed) ping();
     if (view === "shop") renderReturn();
     if (view === "order") renderOrder();
     if (view === "book") enterBooking();
@@ -298,7 +299,7 @@
         store.set("demo_bookings", all);
         return { ok: true };
       }
-      return rpc("pyramide_book", { p_order: no, p_slot: new Date(slot).toISOString(), p_name: name, p_email: email || null, p_lang: state.lang, p_qty: qty });
+      return rpc("pyramide_book", { p_order: no, p_slot: new Date(slot).toISOString(), p_name: name, p_email: email || null, p_lang: state.lang, p_qty: qty, p_visitor: visitorId() });
     }
   };
 
@@ -562,6 +563,42 @@
     });
     stage.addEventListener("pointerleave", () => { tilt.style.transition = ""; tilt.style.transform = ""; });
   }
+
+  /* ── visitor stats (random id, no personal data) ── */
+  function visitorId() {
+    let id = store.get("vid");
+    if (!id || !/^v_[a-z0-9]{16,40}$/.test(id)) {
+      const b = new Uint8Array(12); crypto.getRandomValues(b);
+      id = "v_" + Array.from(b, (x) => x.toString(36).padStart(2, "0")).join("").slice(0, 20);
+      store.set("vid", id);
+    }
+    return id;
+  }
+  function deviceType() {
+    const ua = navigator.userAgent || "";
+    if (/iPad|Tablet/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return "tablet";
+    if (/Mobi|Android|iPhone|iPod/i.test(ua)) return "mobile";
+    return "desktop";
+  }
+  function referrerHost() {
+    try {
+      const saved = sessionStorage.getItem("pyr_ref");
+      if (saved !== null) return saved || null;
+      const r = document.referrer ? new URL(document.referrer).hostname.replace(/^www\./, "") : "";
+      const own = r === location.hostname;
+      sessionStorage.setItem("pyr_ref", own ? "" : r);
+      return own ? null : r || null;
+    } catch { return null; }
+  }
+  let lastPing = 0;
+  function ping() {
+    if (!LIVE_DB || store.get("is_admin")) return;
+    if (Date.now() - lastPing < 4000) return;
+    lastPing = Date.now();
+    rpc("pyramide_ping", { p_visitor: visitorId(), p_view: currentView || "shop", p_lang: state.lang, p_device: deviceType(), p_referrer: referrerHost() }).catch(() => {});
+  }
+  setInterval(() => { if (!document.hidden) ping(); }, 30000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) ping(); });
 
   /* ── boot ──────────────────────────────────── */
   applyLang();

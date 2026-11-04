@@ -19,6 +19,14 @@ Müşteri sağ üstteki **Termin buchen** ile numarasını girip randevusunu de�
 
 ## Admin paneli
 
+**Genel bakış** sekmesi (15 saniyede bir yenilenir):
+- Şu an sitede kaç kişi var ve her biri hangi adımda (ana sayfa, numara ekranı, takvim, onay), cihaz, dil, ne zamandır sitede, nereden geldi, rezervasyonu/sohbeti var mı
+- Bugün / dün / son 7 / son 30 gün ziyaretçi, bugün ilk kez gelenler, rezervasyona dönüşme oranı
+- Son 14 günün grafiği (altında günlük rezervasyon sayısı), bugün saat saat ziyaretçi, cihaz / dil / kaynak dağılımı
+
+Ziyaretçi sayımı rastgele bir tarayıcı kimliğiyle yapılır (IP yok, isim yok). Admin sayfasını açan tarayıcı sayılmaz.
+
+
 - Bugün / yaklaşan / geçmiş / tümü filtreleri, isim–numara–e-posta araması
 - Her rezervasyonda saat, isim, e-posta, adet, alınacak nakit ve Bestellnummer görünür
 - "Teslim edildi" düğmesi; rezervasyon silme (silinen saat tekrar boşa çıkar)
@@ -29,7 +37,8 @@ Müşteri sağ üstteki **Termin buchen** ile numarasını girip randevusunu de�
 ## Mesajlar (sohbet)
 
 - Sitede sağ altta **Nachricht** butonu: ziyaretçi giriş yapmadan yazar; cevabın aynı pencerede görünür.
-- Admin paneli → **Mesajlar** sekmesi: konuşma listesi (okunmamışlar işaretli), cevap kutusu, konuşma silme. Panel 10 saniyede bir yenilenir.
+- Admin paneli → **Mesajlar** sekmesi: konuşma listesi (okunmamışlar, çevrimiçi olanlar ve rezervasyon etiketiyle), cevap kutusu, konuşma silme. Panel 10 saniyede bir yenilenir.
+- Her konuşmanın üstünde müşteri kartı: rezervasyonu (Bestellnummer, adet, nakit, randevu, rezervasyonu yaptığı saat, durum) ve ziyaret bilgisi (şu an sitede mi, hangi adımda, ilk ziyaret, kaç gün geldi, cihaz, dil, kaynak).
 - Ziyaretçi o tarayıcıda otomatik hatırlanır. Başka cihazda devam etmek için anahtar simgesinden `PYC-XXXX-XXXX-XXXX-XXXX` kodunu alıp diğer cihazda girer.
 - İsim/e-posta ve Bestellnummer (varsa) konuşmaya otomatik eklenir. Kötüye kullanıma karşı sınır: konuşma başına 10 dakikada 15 mesaj.
 
@@ -76,6 +85,7 @@ assets/js/chat.js      sohbet penceresi
 assets/img/            sticker, bayraklar, ikonlar
 supabase/schema.sql    rezervasyon tabloları + fonksiyonlar
 supabase/chat.sql      sohbet tabloları + fonksiyonlar (schema.sql'den sonra)
+supabase/analytics.sql ziyaretçi istatistikleri + admin verileri (chat.sql'den sonra)
 ```
 
 Saatleri veya en fazla adedi değiştirirsen aynı değerleri `supabase/schema.sql` → `pyramide_book` içindeki kontrollerde de güncelle.

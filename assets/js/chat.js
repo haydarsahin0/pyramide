@@ -165,7 +165,7 @@
     try {
       const res = await rpc("pyramide_chat_send", {
         p_token: token, p_body: text, p_name: $("#chatName").value.trim() || null,
-        p_email: email || null, p_order: order, p_lang: lang()
+        p_email: email || null, p_order: order, p_lang: lang(), p_visitor: store.get("vid")
       });
       if (!res || !res.ok) throw new Error(res && res.error);
       const prof = profile(), nm = $("#chatName").value.trim();
