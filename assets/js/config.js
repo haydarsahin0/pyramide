@@ -9,7 +9,7 @@ window.PYRAMIDE_CONFIG = {
   supabaseAnonKey: "sb_publishable_RB6sXIDgr3RsYUutzqH0kg_JIWVJglC",
 
   // Product
-  priceEur: 6,       // paid in cash at pickup
+  priceEur: 7,       // paid in cash at pickup
   maxQty: 5,         // stickers per reservation
 
   // Pickup schedule (Europe/Berlin time)

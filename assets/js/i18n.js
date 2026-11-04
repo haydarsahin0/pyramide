@@ -1,7 +1,7 @@
 window.PYRAMIDE_I18N = {
   de: {
     "meta.title": "Pyramide Göttingen — Sticker, Edition 01",
-    "meta.desc": "Ein einziger Sticker, gestaltet in Göttingen. 6 €, bar bei Abholung im SUB Café.",
+    "meta.desc": "Ein einziger Sticker, gestaltet in Göttingen. {price}, bar bei Abholung im SUB Café.",
 
     "nav.sticker": "Sticker",
     "nav.how": "So funktioniert’s",
@@ -125,14 +125,14 @@ window.PYRAMIDE_I18N = {
     "rules.eyebrow": "Wichtig",
     "rules.title": "Zwei Regeln.<br>Ohne Ausnahme.",
     "rules.1.t": "Bargeld mitbringen.",
-    "rules.1.d": "Bezahlt wird ausschließlich bar bei der Abholung – 6 € pro Sticker. Keine Karte, keine Vorkasse.",
+    "rules.1.d": "Bezahlt wird ausschließlich bar bei der Abholung – {price} pro Sticker. Keine Karte, keine Vorkasse.",
     "rules.2.t": "Pünktlich sein.",
     "rules.2.d": "Sei zu deiner gebuchten Uhrzeit im SUB Café, 2. OG. Du schaffst es nicht? Verschiebe deinen Termin vorher online.",
     "faq.0.q": "Wie bezahle ich?",
-    "faq.0.a": "Nur in bar, direkt bei der Abholung: 6 € pro Sticker. Eine Online-Zahlung gibt es nicht.",
+    "faq.0.a": "Nur in bar, direkt bei der Abholung: {price} pro Sticker. Eine Online-Zahlung gibt es nicht.",
     "order.ack.title": "Bitte bestätige",
     "order.ack.1": "Ich habe meine Bestellnummer gespeichert.",
-    "order.ack.2": "Ich bringe den Betrag in bar mit (6 € pro Sticker).",
+    "order.ack.2": "Ich bringe den Betrag in bar mit ({price} pro Sticker).",
     "order.ack.3": "Ich bin pünktlich zu meinem Termin da.",
     "book.qty": "Anzahl",
     "book.total": "Bar mitbringen",
@@ -168,13 +168,15 @@ window.PYRAMIDE_I18N = {
     "chat.code.restore": "Code von einem anderen Gerät?",
     "chat.code.open": "Öffnen",
     "chat.code.notfound": "Kein Chat mit diesem Code gefunden.",
+    "chat.peek.title": "Neue Nachricht",
+    "chat.fab.new": "Neue Nachricht",
     "img.alt": "Der Pyramide-Sticker: eine kleine, lächelnde Pyramide mit rosigen Wangen",
     "price.label": "inkl. Abholung"
   },
 
   en: {
     "meta.title": "Pyramide Göttingen — Sticker, Edition 01",
-    "meta.desc": "One single sticker, designed in Göttingen. €6, paid in cash at pickup at the SUB Café.",
+    "meta.desc": "One single sticker, designed in Göttingen. {price}, paid in cash at pickup at the SUB Café.",
 
     "nav.sticker": "Sticker",
     "nav.how": "How it works",
@@ -298,14 +300,14 @@ window.PYRAMIDE_I18N = {
     "rules.eyebrow": "Important",
     "rules.title": "Two rules.<br>No exceptions.",
     "rules.1.t": "Bring cash.",
-    "rules.1.d": "Payment is cash only, at pickup – €6 per sticker. No cards, no prepayment.",
+    "rules.1.d": "Payment is cash only, at pickup – {price} per sticker. No cards, no prepayment.",
     "rules.2.t": "Be on time.",
     "rules.2.d": "Be at the SUB Café, 2nd floor, at your booked time. Can’t make it? Reschedule online beforehand.",
     "faq.0.q": "How do I pay?",
-    "faq.0.a": "Cash only, at pickup: €6 per sticker. There is no online payment.",
+    "faq.0.a": "Cash only, at pickup: {price} per sticker. There is no online payment.",
     "order.ack.title": "Please confirm",
     "order.ack.1": "I’ve saved my order number.",
-    "order.ack.2": "I’ll bring the amount in cash (€6 per sticker).",
+    "order.ack.2": "I’ll bring the amount in cash ({price} per sticker).",
     "order.ack.3": "I’ll be there on time for my appointment.",
     "book.qty": "Quantity",
     "book.total": "Bring in cash",
@@ -341,6 +343,8 @@ window.PYRAMIDE_I18N = {
     "chat.code.restore": "Have a code from another device?",
     "chat.code.open": "Open",
     "chat.code.notfound": "No chat found with this code.",
+    "chat.peek.title": "New message",
+    "chat.fab.new": "New message",
     "img.alt": "The Pyramide sticker: a small, smiling pyramid with rosy cheeks",
     "price.label": "incl. pickup"
   }

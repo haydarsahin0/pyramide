@@ -66,11 +66,28 @@
     updateBadge();
   }
 
+  const baseTitle = () => document.title.replace(/^\(\d+\)\s*/, "");
   function updateBadge() {
     const seen = store.get("chat_seen", 0);
-    const unread = msgs.filter((m) => m.sender === "admin" && m.id > seen).length;
-    badge.hidden = open || !unread;
+    const fresh = msgs.filter((m) => m.sender === "admin" && m.id > seen);
+    const unread = open ? 0 : fresh.length;
+    badge.hidden = !unread;
     badge.textContent = unread;
+    fab.classList.toggle("has-unread", !!unread);
+    const label = fab.querySelector(".chat-fab-label");
+    label.textContent = t(unread ? "chat.fab.new" : "chat.fab");
+    document.title = (unread ? `(${unread}) ` : "") + baseTitle();
+
+    // speech bubble with the latest reply, until opened or dismissed
+    const peek = $("#chatPeek");
+    const last = fresh[fresh.length - 1];
+    const dismissed = store.get("chat_peek_dismissed", 0);
+    if (unread && last && last.id > dismissed) {
+      $("#chatPeekBody").textContent = last.body.length > 110 ? last.body.slice(0, 110) + "…" : last.body;
+      peek.hidden = false;
+    } else {
+      peek.hidden = true;
+    }
   }
 
   async function poll() {
@@ -92,7 +109,7 @@
   function schedule() {
     clearInterval(timer);
     if (!token) return;
-    timer = setInterval(() => { if (!document.hidden) poll(); }, open ? 6000 : 45000);
+    timer = setInterval(() => { if (!document.hidden) poll(); }, open ? 6000 : 20000);
   }
 
   function setOpen(v) {
@@ -114,6 +131,13 @@
   }
 
   fab.addEventListener("click", () => setOpen(!open));
+  $("#chatPeekOpen").addEventListener("click", () => setOpen(true));
+  $("#chatPeekClose").addEventListener("click", () => {
+    const lastAdmin = msgs.filter((m) => m.sender === "admin").pop();
+    if (lastAdmin) store.set("chat_peek_dismissed", lastAdmin.id);
+    $("#chatPeek").hidden = true;
+  });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && token) poll(); });
   $("#chatClose").addEventListener("click", () => setOpen(false));
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && open) setOpen(false); });
 
@@ -194,7 +218,7 @@
   renderCode();
 
   // keep texts in sync with the language switch
-  new MutationObserver(() => { if (open) render(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
+  new MutationObserver(() => { updateBadge(); if (open) render(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
 
   updateBadge();
   if (token) { poll(); schedule(); }

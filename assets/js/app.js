@@ -39,7 +39,8 @@
 
   const t = (key, vars) => {
     let s = (dict[state.lang] && dict[state.lang][key]) ?? dict.de[key] ?? key;
-    if (vars) for (const [k, v] of Object.entries(vars)) s = s.replace("{" + k + "}", v);
+    vars = Object.assign({ price: money(cfg.priceEur) }, vars);
+    for (const [k, v] of Object.entries(vars)) s = s.split("{" + k + "}").join(v);
     return s;
   };
   const locale = () => (state.lang === "de" ? "de-DE" : "en-GB");

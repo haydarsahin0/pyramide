@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Pyramide Göttingen — Sticker, Edition 01</title>
-  <meta name="description" content="Ein einziger Sticker, gestaltet in Göttingen. 6 €, bar bei Abholung im SUB Café.">
+  <meta name="description" content="Ein einziger Sticker, gestaltet in Göttingen. 7 €, bar bei Abholung im SUB Café.">
   <meta name="theme-color" content="#F6F1E7">
   <meta property="og:title" content="Pyramide Göttingen">
-  <meta property="og:description" content="Ein Sticker. Ein Termin. Fertig. — 6 €, bar bei Abholung im SUB Café, Göttingen.">
+  <meta property="og:description" content="Ein Sticker. Ein Termin. Fertig. — 7 €, bar bei Abholung im SUB Café, Göttingen.">
   <meta property="og:image" content="https://haydarsahin0.github.io/pyramide/assets/img/og.png">
   <meta property="og:type" content="website">
   <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=20261103c">
+  <link rel="stylesheet" href="assets/css/style.css?v=20261104a">
 </head>
 <body>
   <div class="bg" aria-hidden="true">
@@ -356,6 +356,13 @@
   </dialog>
 
   <!-- chat -->
+  <div class="chat-peek" id="chatPeek" hidden role="status" aria-live="polite">
+    <button type="button" class="chat-peek-open" id="chatPeekOpen">
+      <img src="assets/img/sticker.svg" width="40" height="40" alt="">
+      <span class="chat-peek-text"><strong data-i18n="chat.peek.title"></strong><span id="chatPeekBody"></span></span>
+    </button>
+    <button type="button" class="chat-peek-close" id="chatPeekClose" data-i18n-aria="chat.close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
   <button class="chat-fab" id="chatFab" type="button" hidden aria-expanded="false" aria-controls="chatPanel">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 6.5A2.5 2.5 0 0 1 7 4h10a2.5 2.5 0 0 1 2.5 2.5v7A2.5 2.5 0 0 1 17 16h-5.2L7.5 19.6V16H7a2.5 2.5 0 0 1-2.5-2.5Z"/></svg>
     <span class="chat-fab-label" data-i18n="chat.fab"></span>
@@ -401,9 +408,9 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="assets/js/config.js?v=20261103c"></script>
-  <script src="assets/js/i18n.js?v=20261103c"></script>
-  <script src="assets/js/app.js?v=20261103c"></script>
-  <script src="assets/js/chat.js?v=20261103c"></script>
+  <script src="assets/js/config.js?v=20261104a"></script>
+  <script src="assets/js/i18n.js?v=20261104a"></script>
+  <script src="assets/js/app.js?v=20261104a"></script>
+  <script src="assets/js/chat.js?v=20261104a"></script>
 </body>
 </html>
