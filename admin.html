@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=20261104d">
+  <link rel="stylesheet" href="assets/css/style.css?v=20261104e">
   <style>
     .a-wrap { max-width: 1080px; margin: 0 auto; padding: 32px var(--gutter) 80px; }
     .a-login { min-height: calc(100vh - var(--nav-h)); display: grid; place-items: center; padding: 24px var(--gutter); }
@@ -240,6 +240,15 @@
     .row-acts button { flex: 1; height: 28px; border-radius: 8px; font-size: 11.5px; font-weight: 600; background: rgba(255,255,255,.6); border: 1px solid rgba(29,27,23,.08); color: var(--ink-2); }
     .row-acts button:hover { border-color: rgba(29,27,23,.35); color: var(--ink); }
     .exp-badge { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: var(--ink); color: var(--gold); font-size: 10.5px; font-weight: 700; letter-spacing: .04em; vertical-align: 2px; }
+
+    .sub-h { font-size: 14px; font-weight: 600; margin: 18px 0 8px; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+    .sub-h span { font-size: 12.5px; font-weight: 400; color: var(--ink-3); }
+    .exp-grid.std .cell[aria-pressed="true"] { background: linear-gradient(180deg, #CDE4C6, #9FC99A); border-color: rgba(63,122,82,.35); }
+    .exp-grid .dl.custom::after { content: "özel"; display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--ink); color: var(--gold); font-size: 9.5px; font-weight: 700; vertical-align: 2px; }
+    .row-acts button.on { background: var(--ink); color: #FBF7EF; }
+    .xp-alert { position: fixed; z-index: 120; left: 50%; top: 18px; transform: translateX(-50%); display: flex; gap: 14px; align-items: center; padding: 14px 18px; border-radius: 20px; background: rgba(29,27,23,.94); color: #FBF7EF; box-shadow: 0 24px 50px -16px rgba(0,0,0,.55); animation: sheetIn .45s var(--ease-spring); max-width: calc(100vw - 24px); }
+    .xp-alert b { color: var(--gold); }
+    .xp-alert button { height: 34px; padding: 0 14px; border-radius: 999px; background: var(--gold); color: var(--ink); font-weight: 700; font-size: 13px; flex: none; }
   </style>
 </head>
 <body>
@@ -291,7 +300,7 @@
       <button type="button" data-tab="ovr" aria-pressed="true">Genel bakış</button>
       <button type="button" data-tab="res" aria-pressed="false">Rezervasyonlar</button>
       <button type="button" data-tab="msg" aria-pressed="false">Mesajlar<span class="tab-badge" id="msgBadge" hidden></span></button>
-      <button type="button" data-tab="exp" aria-pressed="false">⚡ Express</button>
+      <button type="button" data-tab="exp" aria-pressed="false">Teslim saatleri</button>
     </div>
 
     <div id="ovrView">
@@ -348,10 +357,19 @@
 
     <div id="expView" hidden>
       <section class="o-card">
+        <div class="o-head"><h2>Standard teslim saatleri</h2><span class="o-note">ücretsiz · her açık saat = :00 ve :30 randevusu · saat 07–23</span></div>
+        <h3 class="sub-h">Haftalık varsayılan <span>her hafta tekrar eder</span></h3>
+        <div class="exp-grid-wrap"><div class="exp-grid std" id="weekGrid"></div></div>
+        <h3 class="sub-h">Önümüzdeki 14 gün <span>bir güne dokunursan o güne özel ayar olur · "Haftalık" ile varsayılana dön</span></h3>
+        <div class="exp-grid-wrap"><div class="exp-grid std" id="stdGrid"></div></div>
+        <p class="exp-status" id="stdStatus"></p>
+      </section>
+
+      <section class="o-card">
         <div class="exp-switch-row">
           <div>
-            <h2 class="exp-h">Express teslim</h2>
-            <p class="o-note">Müşteriler <b id="expFeeTxt"></b> ekstra ödeyerek, aşağıda açtığın saatler içinde 15 dakikalık aralıklarla istedikleri saati seçer. Değişiklikler sitede anında görünür.</p>
+            <h2 class="exp-h">⚡ Express teslim (1 saat içinde)</h2>
+            <p class="o-note">Şu anki saat aşağıda açıksa müşteriler <b id="expFeeTxt"></b> ekstra ödeyerek saat seçmeden rezervasyon yapar ve <b>1 saat içinde</b> gelir. Yeni Express gelince bu panel seni uyarır. Değişiklikler sitede anında görünür.</p>
           </div>
           <button type="button" class="switch" id="expSwitch" role="switch" aria-checked="false" aria-label="Express açık / kapalı"><span></span></button>
         </div>
@@ -364,7 +382,7 @@
         <p class="exp-status" id="expStatus"></p>
       </section>
       <section class="o-card">
-        <div class="o-head"><h2>Müsait olduğun saatler</h2><span class="o-note">Kutuya dokun: aç / kapat · saat 07–23</span></div>
+        <div class="o-head"><h2>Express için müsait olduğun saatler</h2><span class="o-note">Kutuya dokun: aç / kapat · saat 07–23</span></div>
         <div class="exp-grid-wrap"><div class="exp-grid" id="expGrid"></div></div>
       </section>
     </div>
@@ -379,7 +397,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="assets/js/config.js?v=20261104d"></script>
-  <script src="assets/js/admin.js?v=20261104d"></script>
+  <script src="assets/js/config.js?v=20261104e"></script>
+  <script src="assets/js/admin.js?v=20261104e"></script>
 </body>
 </html>

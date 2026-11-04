@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=20261104d">
+  <link rel="stylesheet" href="assets/css/style.css?v=20261104e">
 </head>
 <body>
   <div class="bg" aria-hidden="true">
@@ -135,7 +135,7 @@
             <a class="btn-link" data-maps target="_blank" rel="noopener"><span data-i18n="pickup.map"></span> <span aria-hidden="true">↗</span></a>
           </div>
           <dl class="pickup-facts">
-            <div><dt data-i18n="pickup.hours.k"></dt><dd data-i18n="pickup.hours.v"></dd></div>
+            <div><dt data-i18n="pickup.hours.k"></dt><dd id="hoursSummary" data-i18n="pickup.hours.v"></dd></div>
             <div><dt data-i18n="pickup.slot.k"></dt><dd data-i18n="pickup.slot.v"></dd></div>
             <div><dt data-i18n="pickup.addr.k"></dt><dd data-address></dd></div>
           </dl>
@@ -247,6 +247,17 @@
         </div>
 
         <div class="booking">
+          <div class="xp-panel card" id="xpPanel" hidden>
+            <div class="xp-bolt" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13 3 5 13.5h6L10 21l8-10.5h-6Z"/></svg></div>
+            <h2 class="xp-title" data-i18n="xp.title"></h2>
+            <p class="xp-sub" id="xpSub"></p>
+            <div class="xp-clock" aria-hidden="true">
+              <span class="xp-now" id="xpNow"></span>
+              <span class="xp-line"><span class="xp-fill"></span></span>
+              <span class="xp-until" id="xpUntil"></span>
+            </div>
+            <p class="xp-steps" data-i18n="xp.steps"></p>
+          </div>
           <div class="calendar card">
             <div class="cal-head">
               <span class="cal-month" id="calMonth"></span>
@@ -429,9 +440,9 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="assets/js/config.js?v=20261104d"></script>
-  <script src="assets/js/i18n.js?v=20261104d"></script>
-  <script src="assets/js/app.js?v=20261104d"></script>
-  <script src="assets/js/chat.js?v=20261104d"></script>
+  <script src="assets/js/config.js?v=20261104e"></script>
+  <script src="assets/js/i18n.js?v=20261104e"></script>
+  <script src="assets/js/app.js?v=20261104e"></script>
+  <script src="assets/js/chat.js?v=20261104e"></script>
 </body>
 </html>

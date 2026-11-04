@@ -27,10 +27,9 @@ window.PYRAMIDE_CONFIG = {
   placeAddress: "Platz der Göttinger Sieben 3, 37073 Göttingen",
   mapsQuery: "Lern- und Studiengebäude Göttingen, Platz der Göttinger Sieben 3, 37073 Göttingen",
 
-  // Express pickup: customer picks any quarter hour inside the hours you open in admin.html
+  // Express pickup: available while the current hour is opened in admin.html
   expressFeeEur: 3,
-  expressStepMinutes: 15,
-  expressLeadMinutes: 15
+  expressWindowMinutes: 60  // Express: pickup within this many minutes
 };
 
 // total for a reservation: first sticker full price, every further one cheaper

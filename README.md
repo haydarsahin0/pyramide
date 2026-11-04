@@ -1,6 +1,6 @@
 # Pyramide Göttingen
 
-Tek ürünlü sticker sitesi (ilk sticker 7 €, ikinciden itibaren 6 €): Almanca / İngilizce, **ödeme teslimde nakit**, LSG (Lern- und Studiengebäude, Platz der Göttinger Sieben 3) teslim randevusu, isteğe bağlı Express (+3 €) ve sana özel admin paneli.
+Tek ürünlü sticker sitesi (ilk sticker 7 €, ikinciden itibaren 6 €): Almanca / İngilizce, **ödeme teslimde nakit**, LSG (Lern- und Studiengebäude, Platz der Göttinger Sieben 3) teslim randevusu, isteğe bağlı Express (+3 €, 1 saat içinde) ve sana özel admin paneli.
 Sadece HTML/CSS/JS kullanıyor; GitHub Pages'te build adımı gerekmeden çalışıyor.
 
 - **Site:** https://haydarsahin0.github.io/pyramide/
@@ -34,13 +34,19 @@ Ziyaretçi sayımı rastgele bir tarayıcı kimliğiyle yapılır (IP yok, isim 
 - CSV olarak dışa aktarma (Excel'de açılır)
 - Sayfa her dakika kendini yeniler
 
-## Express teslim (+3 €)
+## Teslim saatleri (admin → Teslim saatleri)
 
-- Takvim sayfasında **Standard** (ücretsiz, her gün 10–20, 30 dk) ve **⚡ Express** (+3 €) seçenekleri var.
-- Express'te müşteri, senin açtığın saatler içinde 15 dakikalık aralıklarla istediği saati seçer (en erken 15 dk sonrası, bugün dahil).
-- Admin paneli → **⚡ Express**: tamamen aç/kapat düğmesi, "şu andan 1 / 2 / 4 saat aç", "bugünü kapat" kısayolları ve 14 gün × 07–23 saat tablosu.
-  Kutuya dokunmak kaydeder; site Express saatlerini 30 saniyede bir yeniler.
-- Express rezervasyonları admin listesinde **⚡ EXPRESS** etiketiyle, nakit tutarına +3 € eklenmiş olarak görünür.
+**Standard (ücretsiz):**
+- *Haftalık varsayılan*: her gün için açık saatler (her açık saat = :00 ve :30 randevusu). "10–20" ve "Kapat" kısayolları.
+- *Önümüzdeki 14 gün*: bir güne dokunmak o güne özel ayar yapar (ör. bir günü kapatmak, saat eklemek). "Haftalık" butonu varsayılana döndürür.
+- Ana sayfadaki "Zeiten" satırı haftalık ayardan otomatik özetlenir (ör. "Mo–Fr 10:00–18:00 · Sa 14:00–16:00 · So geschlossen").
+
+**⚡ Express (+3 €, 1 saat içinde):**
+- Müşteri saat seçmez: "Abholung innerhalb von 1 Stunde · bis spätestens HH:MM". Rezervasyon anı kaydedilir, müşteri 1 saat içinde gelir.
+- Express yalnızca şu anki saat Express tablosunda açıksa ve Express düğmesi açıksa seçilebilir. "Şu andan 1 / 2 / 4 saat aç" kısayolları en pratik yol.
+- Yeni Express rezervasyonu gelince admin panelinde üstte uyarı, ses ve sekme başlığında "⚡ Yeni Express!" çıkar (panel 30 saniyede bir yenilenir).
+
+Site saatleri 30 saniyede bir yeniden yükler; değişiklikler anında görünür.
 
 ## Mesajlar (sohbet)
 
@@ -95,6 +101,8 @@ supabase/schema.sql    rezervasyon tabloları + fonksiyonlar
 supabase/chat.sql      sohbet tabloları + fonksiyonlar (schema.sql'den sonra)
 supabase/analytics.sql ziyaretçi istatistikleri + admin verileri (chat.sql'den sonra)
 supabase/express.sql   Express saatleri + ayarlar (analytics.sql'den sonra)
+supabase/hours.sql     Standard haftalık saatler + günlük istisnalar (express.sql'den sonra)
+supabase/express_now.sql Express = 1 saat içinde; rezervasyon kontrolü (hours.sql'den sonra)
 ```
 
 Saatleri veya en fazla adedi değiştirirsen aynı değerleri `supabase/schema.sql` → `pyramide_book` içindeki kontrollerde de güncelle.

@@ -78,6 +78,7 @@
       const res = await api.list(state.pw);
       if (!res || !res.ok) { ss.del("pw"); state.pw = null; return showLogin("Şifre yanlış."); }
       state.rows = (res.rows || []).map((r) => ({ ...r, ts: Date.parse(r.slot), qty: r.qty || 1 }));
+      notifyExpress(state.rows);
       showDash();
       render();
       $("#updated").textContent = "Son güncelleme: " + fmtTime(Date.now());
@@ -143,7 +144,7 @@
         <div class="rows">` +
         items.map((r) => `
           <div class="row${r.picked_up ? " done" : ""}">
-            <span class="r-time">${fmtTime(r.ts)}${r.express ? '<span class="exp-badge">⚡ EXPRESS</span>' : ""}</span>
+            <span class="r-time">${r.express ? `${fmtTime(r.ts)}<small class="r-made">bis ${fmtTime(r.ts + cfg.expressWindowMinutes * 60000)}</small><span class="exp-badge">⚡ EXPRESS</span>` : fmtTime(r.ts)}</span>
             <span class="r-name">${esc(r.name)}${r.online ? '<span class="online-dot" title="Şu an sitede"></span>' : ""}${r.email ? `<span class="r-email"><a href="mailto:${esc(r.email)}">${esc(r.email)}</a></span>` : ""}${r.created_at ? `<span class="r-made">Rezerve: ${esc(fmtStamp(r.created_at))}${r.has_chat ? " · sohbet var" : ""}</span>` : ""}</span>
             <span class="r-meta">
               <span class="r-qty"><span class="r-lbl">Adet</span>${r.qty} ×</span>
@@ -221,7 +222,7 @@
   window.addEventListener("scroll", () => nav.classList.toggle("scrolled", window.scrollY > 4), { passive: true });
 
   // auto-refresh every minute while visible
-  setInterval(() => { if (!document.hidden && !$("#dash").hidden) load(true); }, 60000);
+  setInterval(() => { if (!$("#dash").hidden) load(true); }, 30000);
 
 
   /* ── messages ────────────────────────────── */
@@ -345,8 +346,8 @@
     $("#resView").hidden = tab !== "res";
     $("#msgView").hidden = tab !== "msg";
     $("#csvBtn").hidden = tab !== "res";
-    $("#aTitle").textContent = { ovr: "Genel bakış", res: "Rezervasyonlar", msg: "Mesajlar", exp: "Express" }[tab];
-    if (tab === "exp") loadExpress();
+    $("#aTitle").textContent = { ovr: "Genel bakış", res: "Rezervasyonlar", msg: "Mesajlar", exp: "Teslim saatleri" }[tab];
+    if (tab === "exp") { loadExpress(); loadHours(); }
     if (tab === "msg") loadThreads();
     if (tab === "ovr") loadStats();
     clearInterval(chat.timer);
@@ -505,6 +506,125 @@
     hbars($("#oRefs"), s.referrers || [], {});
   }
 
+  /* ── new Express booking alert ────────────── */
+  const seenXp = new Set(); let xpPrimed = false;
+  function notifyExpress(rows) {
+    const fresh = rows.filter((r) => r.express && !r.picked_up && r.ts + cfg.expressWindowMinutes * 60000 > Date.now());
+    const news = xpPrimed ? fresh.filter((r) => !seenXp.has(r.order_no)) : [];
+    fresh.forEach((r) => seenXp.add(r.order_no));
+    xpPrimed = true;
+    if (!news.length) return;
+    const r = news[news.length - 1];
+    document.querySelector(".xp-alert")?.remove();
+    const el = document.createElement("div"); el.className = "xp-alert"; el.setAttribute("role", "alert");
+    el.innerHTML = `<span>⚡ <b>Yeni Express:</b> ${esc(r.name)} · ${r.qty} adet · ${money(cfg.total(r.qty, true))} · ${fmtTime(r.ts + cfg.expressWindowMinutes * 60000)}'e kadar gelecek</span><button type="button">Tamam</button>`;
+    el.querySelector("button").addEventListener("click", () => { el.remove(); document.title = "Pyramide · Admin"; });
+    document.body.appendChild(el);
+    document.title = "⚡ Yeni Express! · Pyramide";
+    try { const a = new AudioContext(), o = a.createOscillator(), g = a.createGain(); o.connect(g); g.connect(a.destination); o.frequency.value = 880; g.gain.setValueAtTime(.12, a.currentTime); g.gain.exponentialRampToValueAtTime(.0001, a.currentTime + .6); o.start(); o.stop(a.currentTime + .6); } catch { /* sound optional */ }
+    if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
+  }
+
+  /* ── standard pickup hours ───────────────── */
+  const sh = { week: null, overrides: new Map(), timer: null, dayTimers: {} };
+  const WEEK_TR = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
+  async function loadHours() {
+    try {
+      const res = await rpc("pyramide_admin_hours", { p_password: state.pw });
+      if (!res || !res.ok) return;
+      sh.week = res.week || {};
+      sh.overrides = new Map((res.overrides || []).map((o) => [o.day, new Set(o.hours)]));
+      renderHours();
+    } catch { toast("Saatler yüklenemedi"); }
+  }
+  const weekSet = (iso) => new Set((sh.week && sh.week[String(iso)]) || []);
+  const isoDow = (key) => { const d = new Date(key + "T12:00:00Z").getUTCDay(); return d === 0 ? 7 : d; };
+  const effective = (key) => sh.overrides.get(key) || weekSet(isoDow(key));
+  function gridHead() {
+    let h = "<span></span>";
+    for (let x = EXP_FROM; x <= EXP_TO; x++) h += `<span class="hh">${String(x).padStart(2, "0")}</span>`;
+    return h + "<span></span>";
+  }
+  function renderHours() {
+    if (!sh.week) return;
+    let w = gridHead();
+    for (let i = 1; i <= 7; i++) {
+      const set = weekSet(i);
+      w += `<span class="dl">${WEEK_TR[i - 1]}</span>`;
+      for (let h = EXP_FROM; h <= EXP_TO; h++) w += `<button type="button" class="cell" data-wd="${i}" data-hour="${h}" aria-pressed="${set.has(h)}"></button>`;
+      w += `<span class="row-acts"><button type="button" data-wrow="${i}" data-act="std">10–20</button><button type="button" data-wrow="${i}" data-act="none">Kapat</button></span>`;
+    }
+    $("#weekGrid").innerHTML = w;
+
+    const now = berlinNow();
+    const booked = new Set(state.rows.filter((r) => !r.express).map((r) => {
+      const p = {}; for (const { type, value } of new Intl.DateTimeFormat("en-US", { timeZone: TZ, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit" }).formatToParts(new Date(r.ts))) p[type] = value;
+      return `${p.year}-${p.month}-${p.day}|${+p.hour}`;
+    }));
+    let g = gridHead();
+    for (let i = 0; i < 14; i++) {
+      const key = addDays(now.day, i);
+      const d = new Date(key + "T12:00:00Z");
+      const wd = new Intl.DateTimeFormat("tr-TR", { weekday: "short", timeZone: "UTC" }).format(d);
+      const dm = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "short", timeZone: "UTC" }).format(d);
+      const custom = sh.overrides.has(key);
+      const set = effective(key);
+      g += `<span class="dl${custom ? " custom" : ""}">${i === 0 ? "Bugün" : i === 1 ? "Yarın" : esc(wd)}<small>${esc(dm)}</small></span>`;
+      for (let h = EXP_FROM; h <= EXP_TO; h++) {
+        const past = i === 0 && h < now.hour;
+        g += `<button type="button" class="cell${past ? " past" : ""}${booked.has(key + "|" + h) ? " booked" : ""}" data-sday="${key}" data-hour="${h}" aria-pressed="${set.has(h)}" title="${esc(dm)} ${String(h).padStart(2, "0")}:00 / :30${booked.has(key + "|" + h) ? " · rezervasyon var" : ""}"></button>`;
+      }
+      g += `<span class="row-acts"><button type="button" data-srow="${key}" data-act="none">Kapat</button><button type="button" data-srow="${key}" data-act="reset" class="${custom ? "on" : ""}">Haftalık</button></span>`;
+    }
+    $("#stdGrid").innerHTML = g;
+  }
+  function stdStatus(msg) { $("#stdStatus").textContent = msg; }
+  function saveWeek() {
+    clearTimeout(sh.timer); stdStatus("Kaydediliyor…");
+    sh.timer = setTimeout(async () => {
+      try {
+        const res = await rpc("pyramide_admin_set_week", { p_password: state.pw, p_week: sh.week });
+        if (!res || !res.ok) throw new Error();
+        sh.week = res.week; renderHours(); stdStatus("Haftalık saatler kaydedildi – sitede güncel."); toast("Kaydedildi – sitede güncel");
+      } catch { toast("Kaydedilemedi"); loadHours(); }
+    }, 400);
+  }
+  function saveStdDay(key, hours) {
+    clearTimeout(sh.dayTimers[key]); stdStatus("Kaydediliyor…");
+    sh.dayTimers[key] = setTimeout(async () => {
+      try {
+        const res = await rpc("pyramide_admin_set_std_day", { p_password: state.pw, p_day: key, p_hours: hours });
+        if (!res || !res.ok) throw new Error();
+        stdStatus("Kaydedildi – sitede güncel."); toast("Kaydedildi – sitede güncel");
+      } catch { toast("Kaydedilemedi"); loadHours(); }
+    }, 350);
+  }
+  $("#weekGrid").addEventListener("click", (e) => {
+    const c = e.target.closest(".cell"), r = e.target.closest("[data-wrow]");
+    if (c) {
+      const k = c.dataset.wd, h = +c.dataset.hour, set = weekSet(k);
+      set.has(h) ? set.delete(h) : set.add(h);
+      sh.week[k] = [...set].sort((a, b) => a - b);
+    } else if (r) {
+      sh.week[r.dataset.wrow] = r.dataset.act === "std" ? [10, 11, 12, 13, 14, 15, 16, 17, 18, 19] : [];
+    } else return;
+    renderHours(); saveWeek();
+  });
+  $("#stdGrid").addEventListener("click", (e) => {
+    const c = e.target.closest(".cell"), r = e.target.closest("[data-srow]");
+    if (c) {
+      const key = c.dataset.sday, h = +c.dataset.hour;
+      const set = new Set(effective(key));
+      set.has(h) ? set.delete(h) : set.add(h);
+      sh.overrides.set(key, set);
+      renderHours(); saveStdDay(key, [...set].sort((a, b) => a - b));
+    } else if (r) {
+      const key = r.dataset.srow;
+      if (r.dataset.act === "reset") { sh.overrides.delete(key); renderHours(); saveStdDay(key, null); }
+      else { sh.overrides.set(key, new Set()); renderHours(); saveStdDay(key, []); }
+    }
+  });
+
   /* ── express availability ───────────────── */
   const ex = { enabled: false, hours: new Map(), timers: {}, loaded: false };
   const EXP_FROM = 7, EXP_TO = 23;
@@ -556,7 +676,7 @@
     const openToday = (ex.hours.get(now.day) || new Set());
     const upcoming = [...openToday].filter((h) => h >= now.hour).sort((a, b) => a - b);
     if (!ex.enabled) expStatus("Express şu an kapalı – sitede görünmüyor.");
-    else if (upcoming.length) expStatus(`Express açık · bugün ${upcoming.map((h) => String(h).padStart(2, "0") + ":00").join(", ")} saatleri sitede seçilebilir.`, true);
+    else if (upcoming.length) expStatus(upcoming[0] === now.hour ? `Express şu an AÇIK – müşteriler 1 saat içinde teslim alabilir. Bugün açık saatler: ${upcoming.map((h) => String(h).padStart(2, "0") + ":00").join(", ")}` : `Express açık · bugün ${upcoming.map((h) => String(h).padStart(2, "0") + ":00").join(", ")} saatlerinde sitede görünecek.`, true);
     else expStatus("Express açık · bugün için açık saat yok. Aşağıdan saat seç.");
   }
 

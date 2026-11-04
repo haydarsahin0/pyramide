@@ -30,6 +30,10 @@
     expressEnabled: false,
     expressHours: new Map(),
     expressSig: "",
+    stdHours: new Map(),
+    stdWeek: null,
+    stdLoaded: false,
+    stdSig: "",
     qty: 1,
     existing: null                          // ms timestamp of an earlier booking
   };
@@ -67,6 +71,7 @@
     $$("[data-fee]").forEach((el) => { el.textContent = "+" + money(cfg.expressFeeEur); });
 
     if (currentView === "shop") renderReturn();
+    renderHoursSummary();
     if (currentView === "book") renderBooking();
     if (currentView === "done") renderDone();
     if (currentView === "order") renderOrder();
@@ -148,10 +153,10 @@
   function renderReturn() {
     const card = $("#returnCard"); if (!card) return;
     const b = state.order && store.get("booking:" + state.order.no);
-    const show = !!(b && b.slot + cfg.slotMinutes * 60000 > Date.now());
+    const show = !!(b && (b.express ? xpUntil(b.slot) : b.slot + cfg.slotMinutes * 60000) > Date.now());
     card.hidden = !show;
     if (show) {
-      $("#returnWhen").textContent = fmtWhen(b.slot);
+      $("#returnWhen").textContent = b.express ? "⚡ " + t("xp.summary", { time: clock(xpUntil(b.slot)) }) : fmtWhen(b.slot);
       $("#returnOrder").textContent = state.order.no;
     }
   }
@@ -258,9 +263,9 @@
 
   function buildDays() {
     const today = wall(Date.now());
-    const exp = state.express;
-    const minStart = Date.now() + (exp ? cfg.expressLeadMinutes : cfg.leadMinutes) * 60000;
-    const step = exp ? cfg.expressStepMinutes : cfg.slotMinutes;
+    const exp = false; // Express has no time slots (pickup within 1 hour)
+    const minStart = Date.now() + cfg.leadMinutes * 60000;
+    const step = cfg.slotMinutes;
     const days = [];
     for (let i = 0; i < cfg.daysAhead; i++) {
       const cal = new Date(Date.UTC(today.year, today.month - 1, today.day + i, 12));
@@ -268,7 +273,9 @@
       const key = `${y}-${pad(m)}-${pad(d)}`;
       const hours = exp
         ? Array.from(state.expressHours.get(key) || []).sort((a, b) => a - b)
-        : Array.from({ length: cfg.closeHour - cfg.openHour }, (_, k) => cfg.openHour + k);
+        : state.stdLoaded
+          ? (state.stdHours.get(key) || []).slice().sort((a, b) => a - b)
+          : Array.from({ length: cfg.closeHour - cfg.openHour }, (_, k) => cfg.openHour + k);
       const slots = [];
       for (const h of hours) {
         for (let mi = 0; mi < 60; mi += step) {
@@ -279,6 +286,48 @@
       days.push({ y, m, d, cal, slots, key });
     }
     return days;
+  }
+
+  /* standard hours (set in admin.html, refreshed live) */
+  async function loadStandard() {
+    if (!LIVE_DB) return false;
+    try {
+      const res = await rpc("pyramide_standard_hours", { p_days: cfg.daysAhead + 2 });
+      const sig = JSON.stringify(res);
+      const changed = sig !== state.stdSig;
+      state.stdSig = sig;
+      state.stdHours = new Map(((res && res.days) || []).map((d) => [d.day, d.hours || []]));
+      state.stdWeek = (res && res.week) || null;
+      state.stdLoaded = true;
+      renderHoursSummary();
+      return changed;
+    } catch { return false; }
+  }
+  function renderHoursSummary() {
+    const el = $("#hoursSummary"); if (!el || !state.stdWeek) return;
+    const ranges = (hours) => {
+      const hs = (hours || []).map(Number).sort((a, b) => a - b);
+      const out = [];
+      for (const h of hs) {
+        const last = out[out.length - 1];
+        if (last && last[1] === h) last[1] = h + 1; else out.push([h, h + 1]);
+      }
+      return out.map(([a, b]) => `${pad(a)}:00–${pad(b)}:00`).join(", ");
+    };
+    const wd = new Intl.DateTimeFormat(locale(), { weekday: "short", timeZone: "UTC" });
+    const name = (i) => wd.format(new Date(Date.UTC(2024, 0, i))).replace(".", ""); // 2024-01-01 is a Monday
+    const per = [1, 2, 3, 4, 5, 6, 7].map((i) => ranges(state.stdWeek[String(i)]));
+    if (per.every((r) => r && r === per[0])) { el.textContent = t("hours.daily", { r: per[0] }); return; }
+    const parts = [];
+    let i = 0;
+    while (i < 7) {
+      let j = i;
+      while (j + 1 < 7 && per[j + 1] === per[i]) j++;
+      const label = i === j ? name(i + 1) : `${name(i + 1)}–${name(j + 1)}`;
+      parts.push(`${label} ${per[i] || t("hours.closed")}`);
+      i = j + 1;
+    }
+    el.textContent = parts.join(" · ");
   }
 
   /* express availability (set in admin.html, refreshed live) */
@@ -299,13 +348,15 @@
       return changed;
     } catch { return false; }
   }
+  // Express is possible while the current Berlin hour is opened by the admin
   function expressAvailable() {
     if (!state.expressEnabled) return false;
-    const old = state.express; state.express = true;
-    const ok = buildDays().some((d) => d.slots.some((s) => !s.past));
-    state.express = old;
-    return ok;
+    const w = wall(Date.now());
+    const set = state.expressHours.get(`${w.year}-${pad(w.month)}-${pad(w.day)}`);
+    return !!(set && set.has(w.hour));
   }
+  const clock = (ts) => new Intl.DateTimeFormat(locale(), { timeZone: cfg.timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(ts);
+  const xpUntil = (from) => (from || Date.now()) + cfg.expressWindowMinutes * 60000;
   function renderModes() {
     const avail = expressAvailable();
     if (state.express && !avail) { state.express = false; state.slot = null; state.days = buildDays(); }
@@ -320,11 +371,9 @@
     if (state.express === express) return;
     state.express = express;
     state.slot = null;
-    state.days = buildDays();
-    state.dayIndex = Math.max(0, state.days.findIndex((d) => d.slots.some((s) => !s.past && !state.taken.has(s.ts))));
     renderModes();
     renderBooking();
-    loadTaken();
+    if (matchMedia("(max-width: 900px)").matches && express) $("#xpPanel").scrollIntoView({ behavior: "smooth", block: "start" });
   }
   $("#modes").addEventListener("click", (e) => {
     const b = e.target.closest(".mode"); if (!b || b.disabled) return;
@@ -332,14 +381,14 @@
   });
   setInterval(async () => {
     if (currentView !== "book" || document.hidden) return;
-    if (await loadExpress()) {
+    const stdChanged = await loadStandard();
+    const expChanged = await loadExpress();
+    if (stdChanged) {
       const keep = state.slot;
-      if (state.express) {
-        state.days = buildDays();
-        if (keep && !state.days.some((d) => d.slots.some((s) => s.ts === keep && !s.past))) state.slot = null;
-      }
-      renderModes(); renderBooking();
+      state.days = buildDays();
+      if (keep && !state.days.some((d) => d.slots.some((s) => s.ts === keep && !s.past))) state.slot = null;
     }
+    renderModes(); renderBooking();
   }, 30000);
 
   /* ── backend ───────────────────────────────── */
@@ -393,8 +442,10 @@
     state.dayIndex = Math.max(0, state.days.findIndex((d) => d.slots.some((s) => !s.past)));
     renderModes();
     renderBooking();
-    await Promise.all([loadTaken(), loadExpress()]);
-    if (saved && saved.express && expressAvailable()) { state.express = true; state.days = buildDays(); state.dayIndex = Math.max(0, state.days.findIndex((d) => d.slots.some((s) => !s.past))); }
+    await Promise.all([loadTaken(), loadExpress(), loadStandard()]);
+    state.days = buildDays();
+    state.dayIndex = Math.max(0, state.days.findIndex((d) => d.slots.some((s) => !s.past && !state.taken.has(s.ts))));
+    if (saved && saved.express && expressAvailable()) state.express = true;
     renderModes();
     try {
       const ex = await api.existing(state.order.no);
@@ -466,8 +517,18 @@
 
     const sum = $("#summary");
     sum.classList.toggle("is-set", !!state.slot);
-    $("#summaryText").textContent = state.slot ? (state.express ? "⚡ " + t("book.express") + " · " : "") + fmtWhen(state.slot) : t("book.pick");
-    $("#confirmBtn").disabled = !state.slot;
+    $("#xpPanel").hidden = !state.express;
+    document.querySelector(".calendar").hidden = state.express;
+    if (state.express) {
+      const until = clock(xpUntil());
+      $("#xpSub").textContent = t("xp.sub", { time: until });
+      $("#xpNow").textContent = clock(Date.now());
+      $("#xpUntil").textContent = until;
+    }
+    sum.classList.toggle("is-set", state.express || !!state.slot);
+    $("#summaryText").textContent = state.express ? "⚡ " + t("xp.summary", { time: clock(xpUntil()) })
+      : state.slot ? fmtWhen(state.slot) : t("book.pick");
+    $("#confirmBtn").disabled = state.express ? !expressAvailable() : !state.slot;
     $("#qtyVal").textContent = state.qty;
     $("#qtyMinus").disabled = state.qty <= 1;
     $("#qtyPlus").disabled = state.qty >= cfg.maxQty;
@@ -537,23 +598,24 @@
     err.hidden = true;
     const name = $("#fName").value.trim().replace(/\s+/g, " ");
     const email = $("#fEmail").value.trim();
-    if (!state.slot) return showErr("book.pick");
+    if (!state.express && !state.slot) return showErr("book.pick");
     if (!name) { $("#fName").focus(); return showErr("book.err.name"); }
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { $("#fEmail").focus(); return showErr("book.err.email"); }
 
     const btn = $("#confirmBtn");
     btn.classList.add("is-loading"); btn.disabled = true;
     try {
-      const res = await api.book({ no: state.order.no, slot: state.slot, name, email, qty: state.qty, express: state.express });
+      const res = await api.book({ no: state.order.no, slot: state.express ? Date.now() : state.slot, name, email, qty: state.qty, express: state.express });
       if (!res || !res.ok) {
         const code = res && res.error;
         if (code === "slot_taken") { state.taken.add(state.slot); state.slot = null; renderBooking(); showErr("book.err.taken"); loadTaken(); }
         else if (code === "invalid_order") showErr("book.err.order");
         else if (code === "already_picked_up") showErr("book.err.picked");
+        else if (code === "express_unavailable") { state.expressEnabled = false; setMode(false); renderModes(); showErr("book.err.express"); }
         else showErr("book.err.invalid");
         return;
       }
-      store.set("booking:" + state.order.no, { slot: state.slot, name, email, qty: state.qty, express: state.express });
+      store.set("booking:" + state.order.no, { slot: state.express ? (Date.parse(res.slot) || Date.now()) : state.slot, name, email, qty: state.qty, express: state.express });
       store.set("profile", { name, email: email || (store.get("profile") || {}).email || "" });
       go("done");
     } catch {
@@ -571,16 +633,16 @@
     const first = (b.name || "").split(" ")[0];
     $("#doneTitle").textContent = t("done.title", { name: first });
     $("#doneDate").textContent = new Intl.DateTimeFormat(locale(), { timeZone: cfg.timezone, weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(b.slot);
-    $("#doneTime").textContent = new Intl.DateTimeFormat(locale(), { timeZone: cfg.timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(b.slot)
-      + " – " + new Intl.DateTimeFormat(locale(), { timeZone: cfg.timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(b.slot + (b.express ? cfg.expressStepMinutes : cfg.slotMinutes) * 60000)
-      + (b.express ? " · ⚡ " + t("book.express") : "");
+    $("#doneTime").textContent = b.express
+      ? t("xp.done.time", { time: clock(xpUntil(b.slot)) }) + " · ⚡ " + t("book.express")
+      : clock(b.slot) + " – " + clock(b.slot + cfg.slotMinutes * 60000);
     $("#donePlace").textContent = cfg.placeName;
     $("#doneOrder").textContent = state.order.no;
     const qty = b.qty || 1;
     $("#doneQty").textContent = (qty === 1 ? t("deal.line1", { qty }) : t("deal.line", { more: qty - 1 })) + (b.express ? " + " + money(cfg.expressFeeEur) + " Express" : "") + " = " + money(cfg.total(qty, b.express));
     const time = new Intl.DateTimeFormat(locale(), { timeZone: cfg.timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(b.slot);
     $("#bringCash").textContent = t("done.bring.cash", { amount: money(cfg.total(qty, b.express)) });
-    $("#bringTime").textContent = t("done.bring.time", { time });
+    $("#bringTime").textContent = b.express ? t("xp.bring", { time: clock(xpUntil(b.slot)) }) : t("done.bring.time", { time });
     $("#bringOrder").textContent = t("done.bring.order", { order: state.order.no });
   }
 
@@ -597,7 +659,7 @@
       `UID:${state.order.no}-${b.slot}@pyramide-goettingen`,
       `DTSTAMP:${fmt(Date.now())}`,
       `DTSTART:${fmt(b.slot)}`,
-      `DTEND:${fmt(b.slot + (b.express ? cfg.expressStepMinutes : cfg.slotMinutes) * 60000)}`,
+      `DTEND:${fmt(b.express ? xpUntil(b.slot) : b.slot + cfg.slotMinutes * 60000)}`,
       `SUMMARY:${esc(t("done.ics.title"))}`,
       `LOCATION:${esc(place)}`,
       `DESCRIPTION:${esc(t("done.ics.desc", { order: state.order.no, amount: money(cfg.total(b.qty || 1, b.express)) }))}`,
@@ -705,6 +767,8 @@
   }
   setInterval(() => { if (!document.hidden) ping(); }, 30000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) ping(); });
+
+  loadStandard();
 
   /* ── boot ──────────────────────────────────── */
   applyLang();

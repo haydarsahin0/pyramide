@@ -1095,3 +1095,17 @@ body.chat-open .chat-peek { display: none; }
   .modes { grid-template-columns: 1fr; gap: 8px; margin-top: 24px; }
   .mode { padding: 12px 14px; }
 }
+
+/* express panel (pickup within 1 hour) */
+.xp-panel { text-align: center; padding: 40px 28px 34px; display: flex; flex-direction: column; align-items: center; }
+.xp-bolt { width: 64px; height: 64px; border-radius: 22px; display: grid; place-items: center; background: linear-gradient(180deg, #F8DFA9, #EBBE70); box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 14px 30px -14px rgba(140, 94, 42, .6); margin-bottom: 20px; animation: tilePop .5s var(--ease-spring); }
+.xp-bolt svg { width: 30px; height: 30px; fill: var(--ink); }
+.xp-title { font-size: clamp(24px, 3vw, 30px); letter-spacing: -0.03em; line-height: 1.15; }
+.xp-sub { color: var(--ink-2); font-size: 16px; margin-top: 10px; max-width: 360px; }
+.xp-clock { display: flex; align-items: center; gap: 12px; width: min(340px, 100%); margin: 28px 0 18px; font-variant-numeric: tabular-nums; }
+.xp-now, .xp-until { font-size: 15px; font-weight: 700; }
+.xp-until { color: #7A4E1E; }
+.xp-line { flex: 1; height: 8px; border-radius: 4px; background: rgba(29, 27, 23, .08); overflow: hidden; }
+.xp-fill { display: block; height: 100%; width: 100%; border-radius: 4px; background: linear-gradient(90deg, #EBBE70, #C98E40); transform-origin: left; animation: xpFill 1.4s var(--ease) both; }
+@keyframes xpFill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.xp-steps { font-size: 13.5px; color: var(--ink-3); }
