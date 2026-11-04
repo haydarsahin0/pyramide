@@ -3,8 +3,8 @@
 Tek ürünlü sticker sitesi (ilk sticker 7 €, ikinciden itibaren 6 €): Almanca / İngilizce, **ödeme teslimde nakit**, LSG (Lern- und Studiengebäude, Platz der Göttinger Sieben 3) teslim randevusu, isteğe bağlı Express (+3 €, 1 saat içinde) ve sana özel admin paneli.
 Sadece HTML/CSS/JS kullanıyor; GitHub Pages'te build adımı gerekmeden çalışıyor.
 
-- **Site:** https://haydarsahin0.github.io/pyramide/
-- **Admin paneli:** https://haydarsahin0.github.io/pyramide/admin.html (sitede linki yok, şifreyle giriliyor)
+- **Site:** https://pyramidegoe.com/ (eski adres https://haydarsahin0.github.io/pyramide/ buraya yönlenir)
+- **Admin paneli:** https://pyramidegoe.com/admin.html (sitede linki yok, şifreyle giriliyor)
 
 ## Müşteri akışı
 
