@@ -47,13 +47,14 @@
   }
   const shareNotices = () => window.dispatchEvent(new CustomEvent("pyr:notices", { detail: notices.slice() }));
   async function fetchNotices() {
-    const orders = myOrders(); if (!orders.length) return false;
+    const orders = myOrders();
     try {
-      const rows = await rpc("pyramide_notices_fetch", { p_orders: orders, p_after: noticeLast });
-      if (!Array.isArray(rows) || !rows.length) return false;
-      for (const r of rows) if (!notices.some((n) => n.id === r.id)) notices.push(r);
-      noticeLast = Math.max(noticeLast, ...rows.map((r) => r.id));
-      store.set("notices", notices.slice(-50));
+      const rows = orders.length ? await rpc("pyramide_notices_fetch", { p_orders: orders, p_after: 0 }) : [];
+      if (!Array.isArray(rows)) return false;
+      if (rows.map((r) => r.id).join(",") === notices.map((n) => n.id).join(",")) return false;
+      notices = rows.slice(-50);
+      noticeLast = notices.reduce((m, x) => Math.max(m, x.id || 0), 0);
+      store.set("notices", notices);
       if (open) markNoticesSeen();
       shareNotices();
       return true;
@@ -131,27 +132,32 @@
     }
   }
 
+  // full sync each time, so messages deleted by the admin disappear here too
   async function poll() {
     const gotNotices = await fetchNotices();
-    if (gotNotices) render();
-    if (!token) return;
-    try {
-      const rows = await rpc("pyramide_chat_fetch", { p_token: token, p_after: lastId });
-      if (Array.isArray(rows) && rows.length) {
-        msgs = msgs.filter((m) => !m.pending || m.failed);
-        for (const r of rows) if (!msgs.some((m) => m.id === r.id)) msgs.push(r);
-        msgs.sort((a, b) => (a.id || 1e15) - (b.id || 1e15));
-        lastId = Math.max(lastId, ...rows.map((r) => r.id));
-        store.set("chat_msgs", msgs.filter((m) => m.id));
-        if (open) store.set("chat_seen", lastId);
-        render();
-      }
-    } catch { /* try again next tick */ }
+    let gotChat = false;
+    if (token) {
+      try {
+        const rows = await rpc("pyramide_chat_fetch", { p_token: token, p_after: 0 });
+        if (Array.isArray(rows)) {
+          const temps = msgs.filter((m) => !m.id && (m.failed || (m.pending && sending)));
+          const sig = rows.map((r) => r.id).join(",");
+          if (sig !== msgs.filter((m) => m.id).map((m) => m.id).join(",") || temps.length !== msgs.filter((m) => !m.id).length) {
+            msgs = rows.concat(temps);
+            lastId = rows.reduce((m, x) => Math.max(m, x.id || 0), 0);
+            store.set("chat_msgs", rows);
+            if (open) store.set("chat_seen", lastId);
+            gotChat = true;
+          }
+        }
+      } catch { /* try again next tick */ }
+    }
+    if (gotNotices || gotChat) render();
   }
 
   function schedule() {
     clearInterval(timer);
-    timer = setInterval(() => { if (!document.hidden) poll(); }, open ? 6000 : 20000);
+    timer = setInterval(() => { if (!document.hidden) poll(); }, open ? 5000 : 15000);
   }
 
   function setOpen(v) {
@@ -217,6 +223,7 @@
       store.set("profile", { name: nm || prof.name || "", email: email || prof.email || "" });
       renderCode();
       await poll();
+      if (window.PyrRT) window.PyrRT.ping("admin");
     } catch (ex) {
       temp.pending = false; temp.failed = true;
       err.textContent = ex.message === "rate_limited" ? t("chat.err.rate") : t("chat.err.network");
@@ -269,4 +276,11 @@
   shareNotices();
   poll(); schedule();
   window.addEventListener("pyr:booked", () => poll());
+  // instant refresh when the admin sends, replies or deletes something
+  let rtTimer = null;
+  if (window.PyrRT) window.PyrRT.on((p) => {
+    if (p.scope === "admin") return;
+    clearTimeout(rtTimer);
+    rtTimer = setTimeout(poll, 150 + Math.random() * 450);
+  });
 })();

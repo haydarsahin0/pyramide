@@ -204,7 +204,7 @@
         const res = await api.remove(state.pw, order);
         if (!res || !res.ok) throw new Error();
         state.rows = state.rows.filter((x) => x.order_no !== order); render();
-        toast(`${order} silindi`);
+        toast(`${order} silindi`); rtPing("site");
       } catch { toast("Silinemedi"); }
     }
   });
@@ -304,9 +304,9 @@
       </div>
       ${loading ? "" : renderCtx()}
       <div class="convo-body" id="convoBody">${loading ? '<div class="convo-empty">Yükleniyor…</div>' :
-        chat.msgs.map((m) => ({ ...m })).concat((chat.notices || []).map((n) => ({ sender: "admin", notice: true, body: n.body, created_at: n.created_at, seen_at: n.seen_at })))
+        chat.msgs.map((m) => ({ ...m })).concat((chat.notices || []).map((n) => ({ sender: "admin", notice: true, id: n.id, body: n.body, created_at: n.created_at, seen_at: n.seen_at })))
           .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))
-          .map((m) => `<div class="bubble ${m.sender === "admin" ? "from-admin" : "from-me"}${m.notice ? " is-notice" : ""}"><p>${m.notice ? "📣 " : ""}${esc(m.body).replace(/\n/g, "<br>")}</p><span class="bubble-meta">${m.notice ? (m.seen_at ? "duyuru · okundu · " : "duyuru · ") : ""}${esc(fmtWhen(m.created_at))}</span></div>`).join("")}</div>
+          .map((m) => `<div class="bubble ${m.sender === "admin" ? "from-admin" : "from-me"}${m.notice ? " is-notice" : ""}"><button type="button" class="bubble-del" ${m.notice ? `data-delnotice="${m.id}"` : `data-delmsg="${m.id}"`} title="Bu mesajı sil" aria-label="Bu mesajı sil">✕</button><p>${m.notice ? "📣 " : ""}${esc(m.body).replace(/\n/g, "<br>")}</p><span class="bubble-meta">${m.notice ? (m.seen_at ? "duyuru · okundu · " : "duyuru · ") : ""}${esc(fmtWhen(m.created_at))}</span></div>`).join("")}</div>
       <form class="convo-form" id="replyForm">
         <textarea id="replyInput" rows="1" maxlength="2000" placeholder="Cevabını yaz… (Enter = gönder, Shift+Enter = yeni satır)"></textarea>
         <button class="btn btn-primary" type="submit">Gönder</button>
@@ -322,7 +322,7 @@
         const res = await rpc("pyramide_admin_delete_thread", { p_password: state.pw, p_thread: th.id });
         if (!res || !res.ok) throw new Error();
         chat.threads = chat.threads.filter((x) => x.id !== th.id); chat.active = null; chat.msgs = [];
-        $(".inbox").classList.remove("has-active"); renderThreads(); renderConvo(); toast("Konuşma silindi");
+        $(".inbox").classList.remove("has-active"); renderThreads(); renderConvo(); toast("Konuşma silindi"); rtPing("site");
       } catch { toast("Silinemedi"); }
     });
     $("#replyForm").addEventListener("submit", async (e) => {
@@ -334,6 +334,7 @@
         if (!res || !res.ok) throw new Error();
         input.value = "";
         th.last = { sender: "admin", body: text }; th.last_message_at = new Date().toISOString();
+        rtPing("site");
         await openThread(th.id, true);
         renderConvo(false);
       } catch { toast("Gönderilemedi"); }
@@ -515,6 +516,49 @@
     hbars($("#oRefs"), s.referrers || [], {});
   }
 
+  /* ── live sync + deleting messages ─────── */
+  const rtPing = (scope) => { if (window.PyrRT) window.PyrRT.ping(scope); };
+  let rtT = null;
+  if (window.PyrRT) window.PyrRT.on((p) => {
+    if (p.scope !== "admin" || $("#dash").hidden) return;
+    clearTimeout(rtT);
+    rtT = setTimeout(() => { load(true); if (chat.active) openThread(chat.active, true); }, 250);
+  });
+
+  async function delAction(fn, args, okMsg) {
+    try {
+      const res = await rpc(fn, Object.assign({ p_password: state.pw }, args));
+      if (!res || !res.ok) throw new Error();
+      toast(okMsg); rtPing("site");
+      return true;
+    } catch { toast("Silinemedi"); return false; }
+  }
+  $("#convo").addEventListener("click", async (e) => {
+    const m = e.target.closest("[data-delmsg]"), n = e.target.closest("[data-delnotice]");
+    if (!m && !n) return;
+    if (!confirm("Bu mesaj silinsin mi? Müşterinin ekranından da silinir.")) return;
+    const ok = m
+      ? await delAction("pyramide_admin_delete_message", { p_id: +m.dataset.delmsg }, "Mesaj silindi")
+      : await delAction("pyramide_admin_delete_notice", { p_id: +n.dataset.delnotice }, "Duyuru silindi");
+    if (ok && chat.active) { await loadThreads(); openThread(chat.active, true); }
+  });
+  $("#bcHist").addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-delbc]"); if (!b) return;
+    if (!confirm("Bu duyuru tüm alıcılardan silinsin mi?")) return;
+    if (await delAction("pyramide_admin_delete_broadcast", { p_id: +b.dataset.delbc }, "Duyuru herkesten silindi")) loadBcHist();
+  });
+  $$("[data-purge]").forEach((b) => b.addEventListener("click", async () => {
+    const what = b.dataset.purge;
+    const label = { chats: "TÜM SOHBETLER", notices: "TÜM DUYURULAR", all: "TÜM SOHBETLER VE DUYURULAR" }[what];
+    const typed = prompt(`${label} kalıcı olarak silinecek (müşterilerin ekranından da).\nOnaylamak için SIL yaz:`);
+    if ((typed || "").trim().toUpperCase() !== "SIL") return;
+    if (await delAction("pyramide_admin_purge", { p_what: what }, "Silindi")) {
+      chat.active = null; chat.msgs = []; chat.notices = [];
+      const ib = document.querySelector(".inbox"); if (ib) ib.classList.remove("has-active");
+      await loadThreads(); renderConvo(); loadBcHist();
+    }
+  }));
+
   /* ── broadcast to waiting customers ─────── */
   const bc = { aud: "today", single: null };
   const waiting = (aud) => state.rows.filter((r) => !r.picked_up
@@ -542,7 +586,7 @@
       if (!res || !res.ok) return;
       const AUD = { today: "Bugün bekleyenler", upcoming: "Tüm bekleyenler", express: "Express" };
       $("#bcHist").innerHTML = (res.rows || []).slice(0, 8).map((b) => `
-        <div class="bc-item"><p>${esc(b.body)}</p><span class="bc-stat">${b.seen}/${b.recipients} okudu</span>
+        <div class="bc-item"><p>${esc(b.body)}</p><span class="bc-stat">${b.seen}/${b.recipients} okudu<button type="button" class="bc-del" data-delbc="${b.id}">Sil</button></span>
         <small>${esc(fmtStamp(b.created_at))} · ${esc(AUD[b.audience] || "Tek kişi")} · ${esc((b.names || []).slice(0, 6).join(", "))}${(b.names || []).length > 6 ? " …" : ""}</small></div>`).join("");
     } catch { /* ignore */ }
   }
@@ -578,7 +622,7 @@
         ? await rpc("pyramide_admin_notify", { p_password: state.pw, p_order: bc.single.order_no, p_body: text })
         : await rpc("pyramide_admin_broadcast", { p_password: state.pw, p_body: text, p_audience: bc.aud });
       if (!res || !res.ok) throw new Error(res && res.error);
-      toast(`Gönderildi – ${res.recipients} kişi`);
+      toast(`Gönderildi – ${res.recipients} kişi`); rtPing("site");
       $("#bcText").value = ""; bc.single = null; if (bc.aud === "single") bc.aud = "today";
       renderBc(); loadBcHist();
     } catch (ex) { toast(ex.message === "no_recipients" ? "Bekleyen müşteri yok" : "Gönderilemedi"); }
@@ -664,7 +708,7 @@
       try {
         const res = await rpc("pyramide_admin_set_week", { p_password: state.pw, p_week: sh.week });
         if (!res || !res.ok) throw new Error();
-        sh.week = res.week; renderHours(); stdStatus("Haftalık saatler kaydedildi – sitede güncel."); toast("Kaydedildi – sitede güncel");
+        sh.week = res.week; renderHours(); stdStatus("Haftalık saatler kaydedildi – sitede güncel."); toast("Kaydedildi – sitede güncel"); rtPing("site");
       } catch { toast("Kaydedilemedi"); loadHours(); }
     }, 400);
   }
@@ -674,7 +718,7 @@
       try {
         const res = await rpc("pyramide_admin_set_std_day", { p_password: state.pw, p_day: key, p_hours: hours });
         if (!res || !res.ok) throw new Error();
-        stdStatus("Kaydedildi – sitede güncel."); toast("Kaydedildi – sitede güncel");
+        stdStatus("Kaydedildi – sitede güncel."); toast("Kaydedildi – sitede güncel"); rtPing("site");
       } catch { toast("Kaydedilemedi"); loadHours(); }
     }, 350);
   }
@@ -768,7 +812,7 @@
         const res = await rpc("pyramide_admin_express_set_day", { p_password: state.pw, p_day: day, p_hours: hours });
         if (!res || !res.ok) throw new Error();
         renderExpress();
-        toast("Kaydedildi – sitede güncel");
+        toast("Kaydedildi – sitede güncel"); rtPing("site");
       } catch { toast("Kaydedilemedi"); loadExpress(); }
     }, 350);
   }
@@ -803,7 +847,7 @@
     try {
       const res = await rpc("pyramide_admin_express_enable", { p_password: state.pw, p_enabled: v });
       if (!res || !res.ok) throw new Error();
-      ex.enabled = v; renderExpress(); toast(v ? "Express açıldı" : "Express kapatıldı");
+      ex.enabled = v; renderExpress(); toast(v ? "Express açıldı" : "Express kapatıldı"); rtPing("site");
     } catch { toast("Kaydedilemedi"); }
   }
   $("#expSwitch").addEventListener("click", () => setEnabled(!ex.enabled));

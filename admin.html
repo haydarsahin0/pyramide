@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=20261104f">
+  <link rel="stylesheet" href="assets/css/style.css?v=20261104g">
   <style>
     .a-wrap { max-width: 1080px; margin: 0 auto; padding: 32px var(--gutter) 80px; }
     .a-login { min-height: calc(100vh - var(--nav-h)); display: grid; place-items: center; padding: 24px var(--gutter); }
@@ -267,6 +267,21 @@
     .r-msg:hover { text-decoration: underline; }
     .convo-body .bubble.is-notice { background: linear-gradient(140deg, #F3D79E, #EFD9A8); color: var(--ink); }
     .convo-body .bubble.is-notice .bubble-meta { color: var(--ink-2); }
+
+    .msg-tools { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    .msg-tools-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+    .btn.danger { height: 34px; padding: 0 14px; font-size: 13px; color: var(--err); }
+    .btn.danger:hover { background: rgba(164,65,46,.1); }
+    .bubble { position: relative; }
+    .bubble-del { position: absolute; top: -8px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: #fff; color: var(--err); box-shadow: 0 2px 8px rgba(0,0,0,.18); opacity: 0; transition: opacity .15s; font-size: 13px; line-height: 1; }
+    .convo-body .from-me .bubble-del { right: -8px; }
+    .convo-body .from-admin .bubble-del { left: -8px; }
+    .bubble:hover .bubble-del, .bubble-del:focus { opacity: 1; }
+    @media (hover: none) { .bubble-del { opacity: .85; } }
+    .bc-del { margin-left: 8px; font-size: 12px; font-weight: 700; color: var(--err); }
+    .bc-del:hover { text-decoration: underline; }
+    .bc-purge { font-size: 12.5px; font-weight: 600; color: var(--err); margin-top: 6px; }
+    .live-dot.off { background: #C8BFB0; animation: none; box-shadow: none; }
   </style>
 </head>
 <body>
@@ -372,6 +387,7 @@
       </div>
       <p class="bc-to" id="bcTo"></p>
       <div class="bc-hist" id="bcHist"></div>
+      <button type="button" class="bc-purge" data-purge="notices">Tüm duyuruları sil</button>
     </section>
     <div class="stats">
       <div class="stat dark"><div class="stat-k">Bugün</div><div class="stat-v" id="sToday">0</div><div class="stat-s" id="sTodaySub"></div></div>
@@ -426,6 +442,14 @@
     </div>
 
     <div id="msgView" hidden>
+      <div class="msg-tools">
+        <span class="o-note">Silinen mesajlar müşterinin ekranından da anında kalkar.</span>
+        <span class="msg-tools-btns">
+          <button type="button" class="btn btn-soft danger" data-purge="chats">Tüm sohbetleri sil</button>
+          <button type="button" class="btn btn-soft danger" data-purge="notices">Tüm duyuruları sil</button>
+          <button type="button" class="btn btn-soft danger" data-purge="all">Her şeyi sil</button>
+        </span>
+      </div>
       <div class="inbox">
         <aside class="threads" id="threads"></aside>
         <section class="convo" id="convo"><div class="convo-empty">Soldan bir konuşma seç.</div></section>
@@ -435,7 +459,9 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="assets/js/config.js?v=20261104f"></script>
-  <script src="assets/js/admin.js?v=20261104f"></script>
+  <script src="assets/js/config.js?v=20261104g"></script>
+  <script src="assets/vendor/supabase.js?v=2.45.4"></script>
+  <script src="assets/js/realtime.js?v=20261104g"></script>
+  <script src="assets/js/admin.js?v=20261104g"></script>
 </body>
 </html>

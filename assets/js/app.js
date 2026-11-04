@@ -398,7 +398,7 @@
     const b = e.target.closest(".mode"); if (!b || b.disabled) return;
     setMode(b.dataset.mode === "exp");
   });
-  setInterval(async () => {
+  async function refreshAvailability() {
     if (currentView !== "book" || document.hidden) return;
     const stdChanged = await loadStandard();
     const expChanged = await loadExpress();
@@ -408,7 +408,10 @@
       if (keep && !state.days.some((d) => d.slots.some((s) => s.ts === keep && !s.past))) state.slot = null;
     }
     renderModes(); renderBooking();
-  }, 30000);
+    loadTaken();
+  }
+  setInterval(refreshAvailability, 30000);
+  if (window.PyrRT) window.PyrRT.on((p) => { if (p.scope === "site" || p.scope === "all") setTimeout(refreshAvailability, Math.random() * 600); });
 
   /* ── backend ───────────────────────────────── */
   async function rpc(fn, body) {
@@ -637,6 +640,7 @@
       store.set("booking:" + state.order.no, { slot: state.express ? (Date.parse(res.slot) || Date.now()) : state.slot, name, email, qty: state.qty, express: state.express });
       store.set("profile", { name, email: email || (store.get("profile") || {}).email || "" });
       window.dispatchEvent(new Event("pyr:booked"));
+      if (window.PyrRT) window.PyrRT.ping("admin");
       go("done");
     } catch {
       showErr("book.err.network");

@@ -56,6 +56,15 @@ Site saatleri 30 saniyede bir yeniden yükler; değişiklikler anında görünü
 - Gönderilenler listesi kaç kişiye gittiğini ve kaçının okuduğunu gösterir. Sohbet ekranında o müşteriye giden duyurular da görünür.
 - Mesaj, müşterinin tarayıcısında kayıtlı Bestellnummer'e gider; müşteri siteyi açtığında (açıksa 20 sn içinde) görür.
 
+## Mesaj silme
+
+- Sohbet ekranında her mesajın üstüne gelince çıkan **✕** ile tek mesaj (sohbet mesajı ya da 📣 duyuru) silinir.
+- Gönderilen duyurular listesinde **Sil** = o duyuru tüm alıcılardan silinir.
+- Mesajlar sekmesinin üstünde **Tüm sohbetleri sil / Tüm duyuruları sil / Her şeyi sil** (onay için `SIL` yazılır).
+- Silinen mesajlar müşterinin açık ekranından anında kalkar (Supabase Realtime sinyali). Sinyal içerik taşımaz, sadece "yenile" der;
+  Realtime erişilemezse site 5–15 saniyede bir zaten kendini yeniler. Admin'in cevapları ve duyurular da aynı yolla anında düşer,
+  yeni müşteri mesajları ve rezervasyonlar admin panelinde anında görünür.
+
 ## Mesajlar (sohbet)
 
 - Sitede sağ altta **Nachricht** butonu: ziyaretçi giriş yapmadan yazar; cevabın aynı pencerede görünür.
@@ -104,6 +113,8 @@ assets/js/i18n.js      DE + EN metinler
 assets/js/app.js       site mantığı
 assets/js/admin.js     admin mantığı
 assets/js/chat.js      sohbet penceresi
+assets/js/realtime.js  canlı 'yenile' sinyali (Supabase Realtime)
+assets/vendor/         supabase-js 2.45.4 (MIT lisansı, CDN'siz)
 assets/img/            sticker, bayraklar, ikonlar
 supabase/schema.sql    rezervasyon tabloları + fonksiyonlar
 supabase/chat.sql      sohbet tabloları + fonksiyonlar (schema.sql'den sonra)
@@ -112,6 +123,7 @@ supabase/express.sql   Express saatleri + ayarlar (analytics.sql'den sonra)
 supabase/hours.sql     Standard haftalık saatler + günlük istisnalar (express.sql'den sonra)
 supabase/express_now.sql Express = 1 saat içinde; rezervasyon kontrolü (hours.sql'den sonra)
 supabase/notices.sql   bekleyenlere toplu / tekil mesaj (express_now.sql'den sonra)
+supabase/delete.sql    mesaj / duyuru silme (notices.sql'den sonra)
 ```
 
 Saatleri veya en fazla adedi değiştirirsen aynı değerleri `supabase/schema.sql` → `pyramide_book` içindeki kontrollerde de güncelle.

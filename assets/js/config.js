@@ -7,6 +7,8 @@ window.PYRAMIDE_CONFIG = {
   // Example url: "https://xxxxxxxxxxxx.supabase.co"
   supabaseUrl: "https://tdwtqlqnmlqdwhavwaer.supabase.co",
   supabaseAnonKey: "sb_publishable_RB6sXIDgr3RsYUutzqH0kg_JIWVJglC",
+  // public anon key (JWT form) used only for the live Realtime signal
+  realtimeKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkd3RxbHFubWxxZHdoYXZ3YWVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0NjU1NzYsImV4cCI6MjEwMzA0MTU3Nn0.mJ9ufpAF9B6nU40YsVri_TVjSU7JKYkfHYMHAIc8k2M",
 
   // Product
   priceEur: 7,       // first sticker (paid in cash at pickup)
