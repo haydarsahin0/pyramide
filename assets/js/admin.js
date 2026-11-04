@@ -308,12 +308,12 @@
           .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))
           .map((m) => `<div class="bubble ${m.sender === "admin" ? "from-admin" : "from-me"}${m.notice ? " is-notice" : ""}"><button type="button" class="bubble-del" ${m.notice ? `data-delnotice="${m.id}"` : `data-delmsg="${m.id}"`} title="Bu mesajı sil" aria-label="Bu mesajı sil">✕</button><p>${m.notice ? "📣 " : ""}${esc(m.body).replace(/\n/g, "<br>")}</p><span class="bubble-meta">${m.notice ? (m.seen_at ? "duyuru · okundu · " : "duyuru · ") : ""}${esc(fmtWhen(m.created_at))}</span></div>`).join("")}</div>
       <form class="convo-form" id="replyForm">
-        <textarea id="replyInput" rows="1" maxlength="2000" placeholder="Cevabını yaz… (Enter = gönder, Shift+Enter = yeni satır)"></textarea>
+        <textarea id="replyInput" rows="1" maxlength="2000" placeholder="Cevabını yaz…" title="Enter = gönder, Shift+Enter = yeni satır"></textarea>
         <button class="btn btn-primary" type="submit">Gönder</button>
       </form>`;
     const body = $("#convoBody"); body.scrollTop = body.scrollHeight;
     const input = $("#replyInput"); input.value = draft;
-    input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("#replyForm").requestSubmit(); } });
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing && !matchMedia("(pointer: coarse)").matches) { e.preventDefault(); $("#replyForm").requestSubmit(); } });
     input.addEventListener("input", () => { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 160) + "px"; });
     $("#convoBack").addEventListener("click", () => { chat.active = null; $(".inbox").classList.remove("has-active"); renderThreads(); renderConvo(); });
     $("#convoDel").addEventListener("click", async () => {
@@ -343,6 +343,8 @@
     if (!loading) setTimeout(() => input.focus(), 30);
   }
 
+  // remember whether the customer info is open while messages refresh
+  $("#convo").addEventListener("toggle", (e) => { if (e.target.classList && e.target.classList.contains("ctx-wrap")) chat.ctxOpen = e.target.open; }, true);
   $("#threads").addEventListener("click", (e) => {
     const b = e.target.closest("[data-thread]"); if (!b) return;
     chat.msgs = []; openThread(b.dataset.thread);
@@ -416,10 +418,12 @@
       <div class="ctx-line"><span>Geldiği gün sayısı</span><span>${v.days}</span></div>
       <div class="ctx-line"><span>Cihaz · dil</span><span>${esc(DEV_TR[v.device] || "–")} · ${esc(LANG_TR[v.lang] || "–")}</span></div>
       <div class="ctx-line"><span>Nereden geldi</span><span>${esc(v.referrer || "doğrudan")}</span></div>` : '<p class="ctx-none">Ziyaret bilgisi yok (eski sohbet).</p>';
-    return `<div class="convo-ctx">
+    const open = chat.ctxOpen ?? !matchMedia("(max-width: 700px)").matches;
+    const sumTxt = (b.length ? `${b[0].qty} adet · ${money(cfg.total(b[0].qty, b[0].express))}${b[0].express ? " · ⚡" : ""}` : "rezervasyon yok") + (v && v.online ? " · ● sitede" : "");
+    return `<details class="ctx-wrap" ${open ? "open" : ""}><summary><span>Müşteri bilgisi</span><span class="o-note">${esc(sumTxt)}</span></summary><div class="convo-ctx">
       <div class="ctx-box"><div class="ctx-k"><span>Sipariş</span><span>${b.length ? b.length + " rezervasyon" : ""}</span></div>${bookingsHtml}</div>
       <div class="ctx-box"><div class="ctx-k"><span>Ziyaretçi</span></div>${visitorHtml}</div>
-    </div>`;
+    </div></details>`;
   }
 
   async function loadStats() {
