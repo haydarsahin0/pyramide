@@ -1066,3 +1066,32 @@ body.chat-open .chat-peek { display: none; }
   .deal-tile img { width: 34px; height: 34px; }
 }
 @media (max-width: 560px) { .deal-save { position: absolute; top: 14px; right: 14px; margin: 0; } }
+
+/* standard / express choice */
+.modes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 760px; margin: 32px auto 0; text-align: left; }
+.mode {
+  display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-radius: 22px;
+  background: var(--glass); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border: 1.5px solid var(--glass-border); box-shadow: var(--glass-shadow);
+  transition: border-color .2s, background .2s, transform .2s var(--ease-spring);
+}
+.mode:hover:not(:disabled) { transform: translateY(-1px); }
+.mode[aria-checked="true"] { border-color: var(--ink); background: rgba(255, 252, 246, .82); }
+.mode:disabled { opacity: .55; cursor: not-allowed; }
+.mode-ic { width: 42px; height: 42px; flex: none; border-radius: 14px; display: grid; place-items: center; background: rgba(255, 255, 255, .8); border: 1px solid rgba(255,255,255,.9); }
+.mode-ic svg { width: 21px; height: 21px; fill: none; stroke: var(--ink); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.mode-exp .mode-ic { background: linear-gradient(180deg, #F8DFA9, #EBBE70); border-color: rgba(255,255,255,.85); }
+.mode-exp .mode-ic svg { fill: #1D1B17; stroke: #1D1B17; stroke-width: 1.2; }
+.mode[aria-checked="true"] .mode-ic { background: var(--ink); border-color: var(--ink); }
+.mode[aria-checked="true"] .mode-ic svg { stroke: var(--gold); }
+.mode-exp[aria-checked="true"] .mode-ic svg { fill: var(--gold); stroke: var(--gold); }
+.mode-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mode-text strong { font-size: 16px; letter-spacing: -0.015em; display: flex; align-items: center; gap: 8px; }
+.mode-text > span { font-size: 13.5px; color: var(--ink-2); }
+.mode-fee { font-style: normal; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--ink); color: var(--gold); }
+.times.is-express .time { font-size: 14px; }
+.deal-fee { font-size: 12px; font-weight: 600; color: #7A4E1E; }
+@media (max-width: 560px) {
+  .modes { grid-template-columns: 1fr; gap: 8px; margin-top: 24px; }
+  .mode { padding: 12px 14px; }
+}

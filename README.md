@@ -1,6 +1,6 @@
 # Pyramide Göttingen
 
-Tek ürünlü sticker sitesi (ilk sticker 7 €, ikinciden itibaren 6 €): Almanca / İngilizce, **ödeme teslimde nakit**, SUB Café (2. kat) teslim randevusu ve sana özel admin paneli.
+Tek ürünlü sticker sitesi (ilk sticker 7 €, ikinciden itibaren 6 €): Almanca / İngilizce, **ödeme teslimde nakit**, LSG (Lern- und Studiengebäude, Platz der Göttinger Sieben 3) teslim randevusu, isteğe bağlı Express (+3 €) ve sana özel admin paneli.
 Sadece HTML/CSS/JS kullanıyor; GitHub Pages'te build adımı gerekmeden çalışıyor.
 
 - **Site:** https://haydarsahin0.github.io/pyramide/
@@ -33,6 +33,14 @@ Ziyaretçi sayımı rastgele bir tarayıcı kimliğiyle yapılır (IP yok, isim 
 - Özet kartlar: bugünkü rezervasyonlar, beklenen nakit, teslim edilenler
 - CSV olarak dışa aktarma (Excel'de açılır)
 - Sayfa her dakika kendini yeniler
+
+## Express teslim (+3 €)
+
+- Takvim sayfasında **Standard** (ücretsiz, her gün 10–20, 30 dk) ve **⚡ Express** (+3 €) seçenekleri var.
+- Express'te müşteri, senin açtığın saatler içinde 15 dakikalık aralıklarla istediği saati seçer (en erken 15 dk sonrası, bugün dahil).
+- Admin paneli → **⚡ Express**: tamamen aç/kapat düğmesi, "şu andan 1 / 2 / 4 saat aç", "bugünü kapat" kısayolları ve 14 gün × 07–23 saat tablosu.
+  Kutuya dokunmak kaydeder; site Express saatlerini 30 saniyede bir yeniler.
+- Express rezervasyonları admin listesinde **⚡ EXPRESS** etiketiyle, nakit tutarına +3 € eklenmiş olarak görünür.
 
 ## Mesajlar (sohbet)
 
@@ -86,6 +94,7 @@ assets/img/            sticker, bayraklar, ikonlar
 supabase/schema.sql    rezervasyon tabloları + fonksiyonlar
 supabase/chat.sql      sohbet tabloları + fonksiyonlar (schema.sql'den sonra)
 supabase/analytics.sql ziyaretçi istatistikleri + admin verileri (chat.sql'den sonra)
+supabase/express.sql   Express saatleri + ayarlar (analytics.sql'den sonra)
 ```
 
 Saatleri veya en fazla adedi değiştirirsen aynı değerleri `supabase/schema.sql` → `pyramide_book` içindeki kontrollerde de güncelle.

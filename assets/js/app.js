@@ -26,6 +26,10 @@
     taken: new Set(),
     loadingTaken: false,
     slot: null,                             // ms timestamp
+    express: false,
+    expressEnabled: false,
+    expressHours: new Map(),
+    expressSig: "",
     qty: 1,
     existing: null                          // ms timestamp of an earlier booking
   };
@@ -39,7 +43,7 @@
 
   const t = (key, vars) => {
     let s = (dict[state.lang] && dict[state.lang][key]) ?? dict.de[key] ?? key;
-    vars = Object.assign({ price: money(cfg.priceEur), extra: money(cfg.priceExtraEur) }, vars);
+    vars = Object.assign({ price: money(cfg.priceEur), extra: money(cfg.priceExtraEur), fee: money(cfg.expressFeeEur) }, vars);
     for (const [k, v] of Object.entries(vars)) s = s.split("{" + k + "}").join(v);
     return s;
   };
@@ -60,6 +64,7 @@
     $$(".lang-btn").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === state.lang)));
 
     $$("[data-price]").forEach((el) => { el.textContent = money(cfg.priceEur); });
+    $$("[data-fee]").forEach((el) => { el.textContent = "+" + money(cfg.expressFeeEur); });
 
     if (currentView === "shop") renderReturn();
     if (currentView === "book") renderBooking();
@@ -216,7 +221,7 @@
     x.strokeStyle = "rgba(29,27,23,.14)"; x.lineWidth = 2;
     x.beginPath(); x.moveTo(140, 1060); x.lineTo(W - 140, 1060); x.stroke();
     x.fillStyle = "#5C554B"; x.font = font(500, 34);
-    x.fillText(cfg.placeName + (state.lang === "de" ? ", 2. OG" : ", 2nd floor"), W / 2, 1140);
+    x.fillText(cfg.placeLong, W / 2, 1140);
     x.fillStyle = "#8F877A"; x.font = font(400, 28);
     x.fillText(cfg.placeAddress, W / 2, 1190);
     x.fillStyle = "#8C5E2A"; x.font = font(600, 30);
@@ -253,22 +258,89 @@
 
   function buildDays() {
     const today = wall(Date.now());
-    const minStart = Date.now() + cfg.leadMinutes * 60000;
+    const exp = state.express;
+    const minStart = Date.now() + (exp ? cfg.expressLeadMinutes : cfg.leadMinutes) * 60000;
+    const step = exp ? cfg.expressStepMinutes : cfg.slotMinutes;
     const days = [];
     for (let i = 0; i < cfg.daysAhead; i++) {
       const cal = new Date(Date.UTC(today.year, today.month - 1, today.day + i, 12));
       const y = cal.getUTCFullYear(), m = cal.getUTCMonth() + 1, d = cal.getUTCDate();
+      const key = `${y}-${pad(m)}-${pad(d)}`;
+      const hours = exp
+        ? Array.from(state.expressHours.get(key) || []).sort((a, b) => a - b)
+        : Array.from({ length: cfg.closeHour - cfg.openHour }, (_, k) => cfg.openHour + k);
       const slots = [];
-      for (let h = cfg.openHour; h < cfg.closeHour; h++) {
-        for (let mi = 0; mi < 60; mi += cfg.slotMinutes) {
+      for (const h of hours) {
+        for (let mi = 0; mi < 60; mi += step) {
           const ts = zonedToUtc(y, m, d, h, mi);
           slots.push({ ts, label: pad(h) + ":" + pad(mi), past: ts < minStart });
         }
       }
-      days.push({ y, m, d, cal, slots });
+      days.push({ y, m, d, cal, slots, key });
     }
     return days;
   }
+
+  /* express availability (set in admin.html, refreshed live) */
+  async function loadExpress() {
+    if (!LIVE_DB) { state.expressEnabled = false; state.expressHours = new Map(); return false; }
+    try {
+      const res = await rpc("pyramide_express_hours", {});
+      const map = new Map();
+      for (const r of (res && res.hours) || []) {
+        if (!map.has(r.day)) map.set(r.day, new Set());
+        map.get(r.day).add(r.hour);
+      }
+      const sig = JSON.stringify([res && res.enabled, (res && res.hours) || []]);
+      const changed = sig !== state.expressSig;
+      state.expressSig = sig;
+      state.expressEnabled = !!(res && res.enabled);
+      state.expressHours = map;
+      return changed;
+    } catch { return false; }
+  }
+  function expressAvailable() {
+    if (!state.expressEnabled) return false;
+    const old = state.express; state.express = true;
+    const ok = buildDays().some((d) => d.slots.some((s) => !s.past));
+    state.express = old;
+    return ok;
+  }
+  function renderModes() {
+    const avail = expressAvailable();
+    if (state.express && !avail) { state.express = false; state.slot = null; state.days = buildDays(); }
+    $$(".mode").forEach((b) => {
+      const on = (b.dataset.mode === "exp") === state.express;
+      b.setAttribute("aria-checked", String(on));
+      if (b.dataset.mode === "exp") b.disabled = !avail;
+    });
+    $("#modeExpDesc").textContent = avail ? t("mode.exp.d") : t("mode.exp.off");
+  }
+  function setMode(express) {
+    if (state.express === express) return;
+    state.express = express;
+    state.slot = null;
+    state.days = buildDays();
+    state.dayIndex = Math.max(0, state.days.findIndex((d) => d.slots.some((s) => !s.past && !state.taken.has(s.ts))));
+    renderModes();
+    renderBooking();
+    loadTaken();
+  }
+  $("#modes").addEventListener("click", (e) => {
+    const b = e.target.closest(".mode"); if (!b || b.disabled) return;
+    setMode(b.dataset.mode === "exp");
+  });
+  setInterval(async () => {
+    if (currentView !== "book" || document.hidden) return;
+    if (await loadExpress()) {
+      const keep = state.slot;
+      if (state.express) {
+        state.days = buildDays();
+        if (keep && !state.days.some((d) => d.slots.some((s) => s.ts === keep && !s.past))) state.slot = null;
+      }
+      renderModes(); renderBooking();
+    }
+  }, 30000);
 
   /* ── backend ───────────────────────────────── */
   async function rpc(fn, body) {
@@ -289,7 +361,7 @@
       const res = await rpc("pyramide_get_booking", { p_order: no });
       return res && res.slot ? Date.parse(res.slot) : null;
     },
-    async book({ no, slot, name, email, qty }) {
+    async book({ no, slot, name, email, qty, express }) {
       if (!LIVE_DB) {
         const list = store.get("demo_taken", []).filter((x) => x.order !== no);
         if (list.some((x) => x.ts === slot)) return { ok: false, error: "slot_taken" };
@@ -299,12 +371,13 @@
         store.set("demo_bookings", all);
         return { ok: true };
       }
-      return rpc("pyramide_book", { p_order: no, p_slot: new Date(slot).toISOString(), p_name: name, p_email: email || null, p_lang: state.lang, p_qty: qty, p_visitor: visitorId() });
+      return rpc("pyramide_book", { p_order: no, p_slot: new Date(slot).toISOString(), p_name: name, p_email: email || null, p_lang: state.lang, p_qty: qty, p_visitor: visitorId(), p_express: !!express });
     }
   };
 
   /* ── booking view ──────────────────────────── */
   async function enterBooking() {
+    state.express = false;
     state.days = buildDays();
     state.slot = null;
     state.existing = null;
@@ -318,8 +391,11 @@
     if (prof && !$("#fName").value) $("#fName").value = prof.name || "";
     if (prof && !$("#fEmail").value) $("#fEmail").value = prof.email || "";
     state.dayIndex = Math.max(0, state.days.findIndex((d) => d.slots.some((s) => !s.past)));
+    renderModes();
     renderBooking();
-    await loadTaken();
+    await Promise.all([loadTaken(), loadExpress()]);
+    if (saved && saved.express && expressAvailable()) { state.express = true; state.days = buildDays(); state.dayIndex = Math.max(0, state.days.findIndex((d) => d.slots.some((s) => !s.past))); }
+    renderModes();
     try {
       const ex = await api.existing(state.order.no);
       if (ex && ex > Date.now()) state.existing = ex;
@@ -330,9 +406,8 @@
   async function loadTaken() {
     state.loadingTaken = true; renderTimesStatus();
     try {
-      const first = state.days[0].slots[0].ts;
-      const lastDay = state.days[state.days.length - 1];
-      const last = lastDay.slots[lastDay.slots.length - 1].ts;
+      const first = Date.now();
+      const last = Date.now() + (cfg.daysAhead + 1) * 864e5;
       state.taken = new Set(await api.taken(first, last));
     } catch {
       toast(t("book.err.network"));
@@ -373,8 +448,10 @@
 
     const visible = day.slots.filter((s) => !s.past);
     const timesEl = $("#times");
+    $("#timesLabel").textContent = t(state.express ? "book.times.exp" : "book.times");
+    timesEl.classList.toggle("is-express", state.express);
     if (!visible.length) {
-      timesEl.innerHTML = `<div class="times-empty">${escapeHtml(t("book.none"))}</div>`;
+      timesEl.innerHTML = `<div class="times-empty">${escapeHtml(t(state.express ? "book.none.exp" : "book.none"))}</div>`;
     } else {
       timesEl.innerHTML = visible.map((s) => {
         const taken = state.taken.has(s.ts);
@@ -389,7 +466,7 @@
 
     const sum = $("#summary");
     sum.classList.toggle("is-set", !!state.slot);
-    $("#summaryText").textContent = state.slot ? fmtWhen(state.slot) : t("book.pick");
+    $("#summaryText").textContent = state.slot ? (state.express ? "⚡ " + t("book.express") + " · " : "") + fmtWhen(state.slot) : t("book.pick");
     $("#confirmBtn").disabled = !state.slot;
     $("#qtyVal").textContent = state.qty;
     $("#qtyMinus").disabled = state.qty <= 1;
@@ -426,7 +503,10 @@
   let dealShown = 0;
   function renderDeal() {
     const q = state.qty;
-    const full = q * cfg.priceEur, total = cfg.total(q), saved = full - total;
+    const fee = state.express ? cfg.expressFeeEur : 0;
+    const full = q * cfg.priceEur + fee, total = cfg.total(q, state.express), saved = full - total;
+    $("#dealFee").hidden = !fee;
+    $("#dealFee").textContent = t("deal.fee");
     $("#cashTotal").textContent = money(total);
     $("#cashOld").hidden = !saved;
     $("#cashOld").textContent = money(full);
@@ -464,7 +544,7 @@
     const btn = $("#confirmBtn");
     btn.classList.add("is-loading"); btn.disabled = true;
     try {
-      const res = await api.book({ no: state.order.no, slot: state.slot, name, email, qty: state.qty });
+      const res = await api.book({ no: state.order.no, slot: state.slot, name, email, qty: state.qty, express: state.express });
       if (!res || !res.ok) {
         const code = res && res.error;
         if (code === "slot_taken") { state.taken.add(state.slot); state.slot = null; renderBooking(); showErr("book.err.taken"); loadTaken(); }
@@ -473,7 +553,7 @@
         else showErr("book.err.invalid");
         return;
       }
-      store.set("booking:" + state.order.no, { slot: state.slot, name, email, qty: state.qty });
+      store.set("booking:" + state.order.no, { slot: state.slot, name, email, qty: state.qty, express: state.express });
       store.set("profile", { name, email: email || (store.get("profile") || {}).email || "" });
       go("done");
     } catch {
@@ -492,13 +572,14 @@
     $("#doneTitle").textContent = t("done.title", { name: first });
     $("#doneDate").textContent = new Intl.DateTimeFormat(locale(), { timeZone: cfg.timezone, weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(b.slot);
     $("#doneTime").textContent = new Intl.DateTimeFormat(locale(), { timeZone: cfg.timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(b.slot)
-      + " – " + new Intl.DateTimeFormat(locale(), { timeZone: cfg.timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(b.slot + cfg.slotMinutes * 60000);
-    $("#donePlace").textContent = cfg.placeName + (state.lang === "de" ? ", 2. OG" : ", 2nd floor");
+      + " – " + new Intl.DateTimeFormat(locale(), { timeZone: cfg.timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(b.slot + (b.express ? cfg.expressStepMinutes : cfg.slotMinutes) * 60000)
+      + (b.express ? " · ⚡ " + t("book.express") : "");
+    $("#donePlace").textContent = cfg.placeName;
     $("#doneOrder").textContent = state.order.no;
     const qty = b.qty || 1;
-    $("#doneQty").textContent = (qty === 1 ? t("deal.line1", { qty }) : t("deal.line", { more: qty - 1 })) + " = " + money(cfg.total(qty));
+    $("#doneQty").textContent = (qty === 1 ? t("deal.line1", { qty }) : t("deal.line", { more: qty - 1 })) + (b.express ? " + " + money(cfg.expressFeeEur) + " Express" : "") + " = " + money(cfg.total(qty, b.express));
     const time = new Intl.DateTimeFormat(locale(), { timeZone: cfg.timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(b.slot);
-    $("#bringCash").textContent = t("done.bring.cash", { amount: money(cfg.total(qty)) });
+    $("#bringCash").textContent = t("done.bring.cash", { amount: money(cfg.total(qty, b.express)) });
     $("#bringTime").textContent = t("done.bring.time", { time });
     $("#bringOrder").textContent = t("done.bring.order", { order: state.order.no });
   }
@@ -508,7 +589,7 @@
   $("#icsBtn").addEventListener("click", () => {
     const b = store.get("booking:" + state.order.no); if (!b) return;
     const fmt = (ts) => new Date(ts).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-    const place = `${cfg.placeName} (${state.lang === "de" ? "2. OG" : "2nd floor"}), ${cfg.placeAddress}`;
+    const place = `${cfg.placeLong}, ${cfg.placeAddress}`;
     const esc = (s) => s.replace(/[,;\\]/g, (c) => "\\" + c);
     const ics = [
       "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Pyramide Göttingen//Pickup//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
@@ -516,10 +597,10 @@
       `UID:${state.order.no}-${b.slot}@pyramide-goettingen`,
       `DTSTAMP:${fmt(Date.now())}`,
       `DTSTART:${fmt(b.slot)}`,
-      `DTEND:${fmt(b.slot + cfg.slotMinutes * 60000)}`,
+      `DTEND:${fmt(b.slot + (b.express ? cfg.expressStepMinutes : cfg.slotMinutes) * 60000)}`,
       `SUMMARY:${esc(t("done.ics.title"))}`,
       `LOCATION:${esc(place)}`,
-      `DESCRIPTION:${esc(t("done.ics.desc", { order: state.order.no, amount: money(cfg.total(b.qty || 1)) }))}`,
+      `DESCRIPTION:${esc(t("done.ics.desc", { order: state.order.no, amount: money(cfg.total(b.qty || 1, b.express)) }))}`,
       "BEGIN:VALARM", "TRIGGER:-PT1H", "ACTION:DISPLAY", `DESCRIPTION:${esc(t("done.ics.title"))}`, "END:VALARM",
       "END:VEVENT", "END:VCALENDAR"
     ].join("\r\n");

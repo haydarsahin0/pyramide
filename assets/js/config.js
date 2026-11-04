@@ -22,13 +22,19 @@ window.PYRAMIDE_CONFIG = {
   leadMinutes: 30,   // a slot must start at least this many minutes from now
 
   // Pickup place
-  placeName: "SUB Café",
-  placeAddress: "Platz der Göttinger Sieben 1, 37073 Göttingen",
-  mapsQuery: "SUB Göttingen, Platz der Göttinger Sieben 1, 37073 Göttingen"
+  placeName: "LSG",
+  placeLong: "LSG – Lern- und Studiengebäude",
+  placeAddress: "Platz der Göttinger Sieben 3, 37073 Göttingen",
+  mapsQuery: "Lern- und Studiengebäude Göttingen, Platz der Göttinger Sieben 3, 37073 Göttingen",
+
+  // Express pickup: customer picks any quarter hour inside the hours you open in admin.html
+  expressFeeEur: 3,
+  expressStepMinutes: 15,
+  expressLeadMinutes: 15
 };
 
 // total for a reservation: first sticker full price, every further one cheaper
-window.PYRAMIDE_CONFIG.total = function (qty) {
+window.PYRAMIDE_CONFIG.total = function (qty, express) {
   const q = Math.max(0, qty | 0);
-  return q ? this.priceEur + (q - 1) * this.priceExtraEur : 0;
+  return q ? this.priceEur + (q - 1) * this.priceExtraEur + (express ? this.expressFeeEur : 0) : 0;
 };

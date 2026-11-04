@@ -19,7 +19,7 @@
 
   const state = { pw: ss.get("pw"), rows: [], filter: "upcoming", q: "" };
 
-  const cash = (rows) => rows.reduce((s, r) => s + cfg.total(r.qty || 1), 0);
+  const cash = (rows) => rows.reduce((s, r) => s + cfg.total(r.qty || 1, r.express), 0);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const money = (n) => new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(n);
   const dayKey = (ts) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(ts);
@@ -143,11 +143,11 @@
         <div class="rows">` +
         items.map((r) => `
           <div class="row${r.picked_up ? " done" : ""}">
-            <span class="r-time">${fmtTime(r.ts)}</span>
+            <span class="r-time">${fmtTime(r.ts)}${r.express ? '<span class="exp-badge">⚡ EXPRESS</span>' : ""}</span>
             <span class="r-name">${esc(r.name)}${r.online ? '<span class="online-dot" title="Şu an sitede"></span>' : ""}${r.email ? `<span class="r-email"><a href="mailto:${esc(r.email)}">${esc(r.email)}</a></span>` : ""}${r.created_at ? `<span class="r-made">Rezerve: ${esc(fmtStamp(r.created_at))}${r.has_chat ? " · sohbet var" : ""}</span>` : ""}</span>
             <span class="r-meta">
               <span class="r-qty"><span class="r-lbl">Adet</span>${r.qty} ×</span>
-              <span class="r-cash"><span class="r-lbl">Nakit</span>${money(cfg.total(r.qty))}</span>
+              <span class="r-cash"><span class="r-lbl">Nakit</span>${money(cfg.total(r.qty, r.express))}</span>
               <span class="r-order"><span class="r-lbl">No</span>${esc(r.order_no)}</span>
             </span>
             <span class="r-st"><button type="button" class="status${r.picked_up ? " on" : ""}" data-pick="${esc(r.order_no)}">
@@ -207,10 +207,10 @@
   });
 
   $("#csvBtn").addEventListener("click", () => {
-    const head = ["Tarih", "Saat", "İsim", "E-posta", "Adet", "Nakit (EUR)", "Bestellnummer", "Teslim edildi", "Dil", "Oluşturuldu"];
+    const head = ["Tarih", "Saat", "İsim", "E-posta", "Adet", "Nakit (EUR)", "Express", "Bestellnummer", "Teslim edildi", "Dil", "Oluşturuldu"];
     const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const lines = [...state.rows].sort((a, b) => a.ts - b.ts).map((r) => [
-      dayKey(r.ts), fmtTime(r.ts), r.name, r.email || "", r.qty, cfg.total(r.qty), r.order_no, r.picked_up ? "evet" : "hayır", r.lang || "", r.created_at || ""
+      dayKey(r.ts), fmtTime(r.ts), r.name, r.email || "", r.qty, cfg.total(r.qty, r.express), r.express ? "evet" : "hayır", r.order_no, r.picked_up ? "evet" : "hayır", r.lang || "", r.created_at || ""
     ].map(q).join(";"));
     const blob = new Blob(["﻿" + [head.map(q).join(";"), ...lines].join("\r\n")], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `pyramide-rezervasyonlar-${dayKey(Date.now())}.csv`;
@@ -254,7 +254,7 @@
       return `<button type="button" class="thread${th.unread > 0 ? " unread" : ""}" data-thread="${esc(th.id)}" aria-current="${th.id === chat.active}">
         <span class="thread-top"><span class="thread-name">${esc(who)}</span><span class="thread-time">${esc(fmtWhen(th.last_message_at))}</span></span>
         <span class="thread-prev">${last}</span>
-        <span class="thread-tags">${th.online ? '<span class="tag green">● çevrimiçi</span>' : ""}${th.booking ? `<span class="tag gold">${th.booking.qty}× · ${esc(fmtDayShort(th.booking.slot))}${th.booking.picked_up ? " · teslim" : ""}</span>` : '<span class="tag">rezervasyon yok</span>'}</span>
+        <span class="thread-tags">${th.online ? '<span class="tag green">● çevrimiçi</span>' : ""}${th.booking ? `<span class="tag gold">${th.booking.express ? "⚡ " : ""}${th.booking.qty}× · ${esc(fmtDayShort(th.booking.slot))}${th.booking.picked_up ? " · teslim" : ""}</span>` : '<span class="tag">rezervasyon yok</span>'}</span>
       </button>`;
     }).join("");
   }
@@ -341,10 +341,12 @@
     chat.tab = tab;
     $$("#tabs button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.tab === tab)));
     $("#ovrView").hidden = tab !== "ovr";
+    $("#expView").hidden = tab !== "exp";
     $("#resView").hidden = tab !== "res";
     $("#msgView").hidden = tab !== "msg";
     $("#csvBtn").hidden = tab !== "res";
-    $("#aTitle").textContent = { ovr: "Genel bakış", res: "Rezervasyonlar", msg: "Mesajlar" }[tab];
+    $("#aTitle").textContent = { ovr: "Genel bakış", res: "Rezervasyonlar", msg: "Mesajlar", exp: "Express" }[tab];
+    if (tab === "exp") loadExpress();
     if (tab === "msg") loadThreads();
     if (tab === "ovr") loadStats();
     clearInterval(chat.timer);
@@ -391,8 +393,8 @@
     const bookingsHtml = b.length ? b.map((x) => `
       <div class="ctx-booking">
         <div class="ctx-line"><span>Bestellnummer</span><span class="mono">${esc(x.order_no)}</span></div>
-        <div class="ctx-line"><span>Adet · nakit</span><span>${x.qty} adet = ${money(cfg.total(x.qty))}</span></div>
-        <div class="ctx-line"><span>Teslim randevusu</span><span>${esc(fmtDayShort(x.slot))}</span></div>
+        <div class="ctx-line"><span>Adet · nakit</span><span>${x.qty} adet${x.express ? " + Express" : ""} = ${money(cfg.total(x.qty, x.express))}</span></div>
+        <div class="ctx-line"><span>Teslim randevusu</span><span>${esc(fmtDayShort(x.slot))}${x.express ? '<span class="exp-badge">⚡ EXPRESS</span>' : ""}</span></div>
         <div class="ctx-line"><span>Rezervasyon yaptı</span><span>${esc(fmtStamp(x.created_at))}</span></div>
         <div class="ctx-line"><span>Durum</span><span>${x.picked_up ? "✓ teslim edildi" : Date.parse(x.slot) < Date.now() ? "randevu geçti" : "bekliyor"}</span></div>
       </div>`).join("") : '<p class="ctx-none">Bu kişinin rezervasyonu yok.</p>';
@@ -474,7 +476,7 @@
           <div class="live-sub">${esc(DEV_TR[v.device] || "Cihaz ?")} · ${esc(LANG_TR[v.lang] || "dil ?")} · ${esc(ago(v.session_started))} önce geldi · ${esc(v.referrer || "doğrudan")}</div>
         </div>
         <span class="tags">
-          ${v.booking ? `<span class="tag gold">Rezervasyonu var · ${v.booking.qty}× · ${esc(fmtDayShort(v.booking.slot))}</span>` : ""}
+          ${v.booking ? `<span class="tag gold">${v.booking.express ? "⚡ Express · " : "Rezervasyonu var · "}${v.booking.qty}× · ${esc(fmtDayShort(v.booking.slot))}</span>` : ""}
           ${v.chat ? '<span class="tag">Sohbet</span>' : ""}
           ${v.returning ? `<span class="tag">Tekrar gelen · ${v.days}. gün</span>` : '<span class="tag green">Yeni</span>'}
         </span>
@@ -502,6 +504,110 @@
     hbars($("#oLangs"), s.langs || [], LANG_TR);
     hbars($("#oRefs"), s.referrers || [], {});
   }
+
+  /* ── express availability ───────────────── */
+  const ex = { enabled: false, hours: new Map(), timers: {}, loaded: false };
+  const EXP_FROM = 7, EXP_TO = 23;
+  const berlinNow = () => {
+    const p = {}; for (const { type, value } of new Intl.DateTimeFormat("en-US", { timeZone: TZ, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit" }).formatToParts(new Date())) p[type] = value;
+    return { day: `${p.year}-${p.month}-${p.day}`, hour: +p.hour };
+  };
+  const addDays = (key, n) => { const d = new Date(key + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+
+  async function loadExpress() {
+    try {
+      const res = await rpc("pyramide_admin_express", { p_password: state.pw });
+      if (!res || !res.ok) return;
+      ex.enabled = !!res.enabled;
+      ex.hours = new Map();
+      for (const r of res.hours || []) { if (!ex.hours.has(r.day)) ex.hours.set(r.day, new Set()); ex.hours.get(r.day).add(r.hour); }
+      ex.loaded = true;
+      renderExpress();
+    } catch { toast("Express ayarları yüklenemedi"); }
+  }
+
+  function expStatus(msg, on) { const el = $("#expStatus"); el.textContent = msg; el.classList.toggle("on", !!on); }
+
+  function renderExpress() {
+    $("#expFeeTxt").textContent = "+" + money(cfg.expressFeeEur);
+    $("#expSwitch").setAttribute("aria-checked", String(ex.enabled));
+    const now = berlinNow();
+    const booked = new Set(state.rows.filter((r) => r.express).map((r) => {
+      const p = {}; for (const { type, value } of new Intl.DateTimeFormat("en-US", { timeZone: TZ, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit" }).formatToParts(new Date(r.ts))) p[type] = value;
+      return `${p.year}-${p.month}-${p.day}|${+p.hour}`;
+    }));
+    let html = '<span></span>';
+    for (let h = EXP_FROM; h <= EXP_TO; h++) html += `<span class="hh">${String(h).padStart(2, "0")}</span>`;
+    html += '<span></span>';
+    for (let i = 0; i < 14; i++) {
+      const key = addDays(now.day, i);
+      const d = new Date(key + "T12:00:00Z");
+      const wd = new Intl.DateTimeFormat("tr-TR", { weekday: "short", timeZone: "UTC" }).format(d);
+      const dm = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "short", timeZone: "UTC" }).format(d);
+      html += `<span class="dl">${i === 0 ? "Bugün" : i === 1 ? "Yarın" : esc(wd)}<small>${esc(dm)}</small></span>`;
+      const set = ex.hours.get(key) || new Set();
+      for (let h = EXP_FROM; h <= EXP_TO; h++) {
+        const past = i === 0 && h < now.hour;
+        html += `<button type="button" class="cell${past ? " past" : ""}${booked.has(key + "|" + h) ? " booked" : ""}" data-day="${key}" data-hour="${h}" aria-pressed="${set.has(h)}" title="${esc(dm)} ${String(h).padStart(2, "0")}:00–${String(h + 1).padStart(2, "0")}:00"></button>`;
+      }
+      html += `<span class="row-acts"><button type="button" data-row="${key}" data-act="all">Tümü</button><button type="button" data-row="${key}" data-act="none">Temizle</button></span>`;
+    }
+    $("#expGrid").innerHTML = html;
+    const openToday = (ex.hours.get(now.day) || new Set());
+    const upcoming = [...openToday].filter((h) => h >= now.hour).sort((a, b) => a - b);
+    if (!ex.enabled) expStatus("Express şu an kapalı – sitede görünmüyor.");
+    else if (upcoming.length) expStatus(`Express açık · bugün ${upcoming.map((h) => String(h).padStart(2, "0") + ":00").join(", ")} saatleri sitede seçilebilir.`, true);
+    else expStatus("Express açık · bugün için açık saat yok. Aşağıdan saat seç.");
+  }
+
+  function saveDay(day) {
+    clearTimeout(ex.timers[day]);
+    expStatus("Kaydediliyor…");
+    ex.timers[day] = setTimeout(async () => {
+      try {
+        const hours = [...(ex.hours.get(day) || [])].sort((a, b) => a - b);
+        const res = await rpc("pyramide_admin_express_set_day", { p_password: state.pw, p_day: day, p_hours: hours });
+        if (!res || !res.ok) throw new Error();
+        renderExpress();
+        toast("Kaydedildi – sitede güncel");
+      } catch { toast("Kaydedilemedi"); loadExpress(); }
+    }, 350);
+  }
+
+  $("#expGrid").addEventListener("click", (e) => {
+    const c = e.target.closest(".cell");
+    const r = e.target.closest("[data-row]");
+    if (c) {
+      const day = c.dataset.day, h = +c.dataset.hour;
+      if (!ex.hours.has(day)) ex.hours.set(day, new Set());
+      const set = ex.hours.get(day);
+      set.has(h) ? set.delete(h) : set.add(h);
+      c.setAttribute("aria-pressed", String(set.has(h)));
+      saveDay(day);
+    } else if (r) {
+      const day = r.dataset.row, now = berlinNow();
+      const start = day === now.day ? Math.max(EXP_FROM, now.hour) : EXP_FROM;
+      ex.hours.set(day, new Set(r.dataset.act === "all" ? Array.from({ length: EXP_TO - start + 1 }, (_, k) => start + k) : []));
+      renderExpress(); saveDay(day);
+    }
+  });
+  $$("[data-quick]").forEach((b) => b.addEventListener("click", async () => {
+    const now = berlinNow();
+    if (!ex.hours.has(now.day)) ex.hours.set(now.day, new Set());
+    const set = ex.hours.get(now.day);
+    if (b.dataset.quick === "close") set.clear();
+    else for (let h = now.hour; h < Math.min(24, now.hour + +b.dataset.quick); h++) set.add(h);
+    if (b.dataset.quick !== "close" && !ex.enabled) await setEnabled(true);
+    renderExpress(); saveDay(now.day);
+  }));
+  async function setEnabled(v) {
+    try {
+      const res = await rpc("pyramide_admin_express_enable", { p_password: state.pw, p_enabled: v });
+      if (!res || !res.ok) throw new Error();
+      ex.enabled = v; renderExpress(); toast(v ? "Express açıldı" : "Express kapatıldı");
+    } catch { toast("Kaydedilemedi"); }
+  }
+  $("#expSwitch").addEventListener("click", () => setEnabled(!ex.enabled));
 
   /* ── boot ────────────────────────────────── */
   try { localStorage.setItem("pyr_is_admin", "true"); } catch { /* ignore */ }

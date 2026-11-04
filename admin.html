@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=20261104c">
+  <link rel="stylesheet" href="assets/css/style.css?v=20261104d">
   <style>
     .a-wrap { max-width: 1080px; margin: 0 auto; padding: 32px var(--gutter) 80px; }
     .a-login { min-height: calc(100vh - var(--nav-h)); display: grid; place-items: center; padding: 24px var(--gutter); }
@@ -213,6 +213,33 @@
       .live-row { grid-template-columns: 34px 1fr; }
       .live-row .tags { grid-column: 2; justify-content: flex-start; }
     }
+
+    .exp-switch-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+    .exp-h { font-size: 19px; letter-spacing: -0.02em; margin-bottom: 4px; }
+    .exp-switch-row .o-note { max-width: 560px; line-height: 1.45; font-size: 13.5px; }
+    .switch { width: 58px; height: 34px; flex: none; border-radius: 999px; background: rgba(29,27,23,.18); position: relative; transition: background .25s; }
+    .switch span { position: absolute; top: 3px; left: 3px; width: 28px; height: 28px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.2); transition: transform .3s var(--ease-spring); }
+    .switch[aria-checked="true"] { background: #3F7A52; }
+    .switch[aria-checked="true"] span { transform: translateX(24px); }
+    .exp-quick { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .exp-quick .btn { height: 36px; padding: 0 14px; font-size: 13.5px; }
+    .exp-status { margin-top: 10px; font-size: 12.5px; color: var(--ink-3); min-height: 18px; }
+    .exp-status.on { color: var(--ok); font-weight: 600; }
+    .exp-grid-wrap { overflow-x: auto; margin: 0 -4px; padding: 0 4px 4px; }
+    .exp-grid { display: grid; grid-template-columns: 112px repeat(17, minmax(30px, 1fr)) 92px; gap: 4px; min-width: 820px; align-items: center; }
+    .exp-grid .hh { font-size: 11px; color: var(--ink-3); text-align: center; font-variant-numeric: tabular-nums; }
+    .exp-grid .dl { font-size: 13px; font-weight: 600; white-space: nowrap; position: sticky; left: 0; background: rgba(250,245,236,.92); padding: 6px 4px; border-radius: 8px; z-index: 1; }
+    .exp-grid .dl small { display: block; font-weight: 400; color: var(--ink-3); font-size: 11.5px; }
+    .cell { height: 32px; border-radius: 8px; background: rgba(255,255,255,.55); border: 1px solid rgba(29,27,23,.08); transition: background .15s, transform .1s; }
+    .cell:hover { border-color: rgba(29,27,23,.35); }
+    .cell:active { transform: scale(.92); }
+    .cell[aria-pressed="true"] { background: linear-gradient(180deg, #F3CF86, #E2AD5A); border-color: rgba(122,78,30,.35); }
+    .cell.past { opacity: .3; pointer-events: none; }
+    .cell.booked::after { content: "●"; font-size: 9px; color: var(--ink); }
+    .row-acts { display: flex; gap: 4px; }
+    .row-acts button { flex: 1; height: 28px; border-radius: 8px; font-size: 11.5px; font-weight: 600; background: rgba(255,255,255,.6); border: 1px solid rgba(29,27,23,.08); color: var(--ink-2); }
+    .row-acts button:hover { border-color: rgba(29,27,23,.35); color: var(--ink); }
+    .exp-badge { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: var(--ink); color: var(--gold); font-size: 10.5px; font-weight: 700; letter-spacing: .04em; vertical-align: 2px; }
   </style>
 </head>
 <body>
@@ -264,6 +291,7 @@
       <button type="button" data-tab="ovr" aria-pressed="true">Genel bakış</button>
       <button type="button" data-tab="res" aria-pressed="false">Rezervasyonlar</button>
       <button type="button" data-tab="msg" aria-pressed="false">Mesajlar<span class="tab-badge" id="msgBadge" hidden></span></button>
+      <button type="button" data-tab="exp" aria-pressed="false">⚡ Express</button>
     </div>
 
     <div id="ovrView">
@@ -318,6 +346,29 @@
     <div id="list"></div>
     </div>
 
+    <div id="expView" hidden>
+      <section class="o-card">
+        <div class="exp-switch-row">
+          <div>
+            <h2 class="exp-h">Express teslim</h2>
+            <p class="o-note">Müşteriler <b id="expFeeTxt"></b> ekstra ödeyerek, aşağıda açtığın saatler içinde 15 dakikalık aralıklarla istedikleri saati seçer. Değişiklikler sitede anında görünür.</p>
+          </div>
+          <button type="button" class="switch" id="expSwitch" role="switch" aria-checked="false" aria-label="Express açık / kapalı"><span></span></button>
+        </div>
+        <div class="exp-quick">
+          <button type="button" class="btn btn-soft" data-quick="1">Şu andan 1 saat aç</button>
+          <button type="button" class="btn btn-soft" data-quick="2">2 saat aç</button>
+          <button type="button" class="btn btn-soft" data-quick="4">4 saat aç</button>
+          <button type="button" class="btn btn-soft" data-quick="close">Bugünü kapat</button>
+        </div>
+        <p class="exp-status" id="expStatus"></p>
+      </section>
+      <section class="o-card">
+        <div class="o-head"><h2>Müsait olduğun saatler</h2><span class="o-note">Kutuya dokun: aç / kapat · saat 07–23</span></div>
+        <div class="exp-grid-wrap"><div class="exp-grid" id="expGrid"></div></div>
+      </section>
+    </div>
+
     <div id="msgView" hidden>
       <div class="inbox">
         <aside class="threads" id="threads"></aside>
@@ -328,7 +379,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="assets/js/config.js?v=20261104c"></script>
-  <script src="assets/js/admin.js?v=20261104c"></script>
+  <script src="assets/js/config.js?v=20261104d"></script>
+  <script src="assets/js/admin.js?v=20261104d"></script>
 </body>
 </html>
